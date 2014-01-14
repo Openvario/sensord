@@ -1,9 +1,9 @@
-# Makefile for sensor_daemon
+# Makefile for sensord
 #Some compiler stuff and flags
 CC = gcc
 CFLAGS = -g -Wall
 LDFLAGS =
-EXECUTABLE = sensordaemon
+EXECUTABLE = sensord
 _OBJ = ms5611.o ams5915.o main.o nmea.o timer.o KalmanFilter1d.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 LIBS = -lrt -lm
@@ -15,7 +15,7 @@ $(ODIR)/%.o: %.c
 	mkdir -p $(ODIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: sensordaemon doc
+all: sensord doc
 	
 doc: 
 	@echo Running doxygen to create documentation

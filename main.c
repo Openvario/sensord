@@ -64,15 +64,15 @@ int main (int argc, char **argv) {
 		"  -l              raw measured values to file\n"\
 		"\n";
 	
-	char filename[50]="sensordaemon_measurement.csv";
+	char filename[50]="sensord_measurement.csv";
 	
 	struct sigaction sigact;
 
 	int foreground=FALSE;
 	
 	t_ms5611 static_sensor;
-	t_ms5611 pitot_sensor;
-	t_ams5915 diff_sensor;
+	t_ms5611 tek_sensor;
+	t_ams5915 dynamic_sensor;
 	
 	t_kalmanfilter1d kf;
 	
@@ -91,8 +91,8 @@ int main (int argc, char **argv) {
 	{
 		switch (c) {
 			case 'v':
-				//sprintf(s, "sensordaemon V0.1 %s %s", __DATE__
-				printf("sensordaemon V%c.%c RELEASE %c build: %s %s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_RELEASE,  __DATE__, __TIME__);
+				//sprintf(s, "sensord V0.1 %s %s", __DATE__
+				printf("sensord V%c.%c RELEASE %c build: %s %s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_RELEASE,  __DATE__, __TIME__);
 				break;
 			
 			case 'l':
@@ -117,7 +117,7 @@ int main (int argc, char **argv) {
 				
 			case '?':
 				printf("Unknow option %c\n", optopt);
-				printf("Usage: sensordaemon [OPTION]\n%s",Usage);
+				printf("Usage: sensord [OPTION]\n%s",Usage);
 				printf("Exiting ...\n");
 				exit(0);
 				break;
@@ -178,7 +178,7 @@ int main (int argc, char **argv) {
 		close(STDERR_FILENO);
 		
 		//open file for log output
-		fp_console = fopen("sensordaemon.log","w+");
+		fp_console = fopen("sensord.log","w+");
 		stderr = fp_console;
 		
 		// install SIGTERM handler
@@ -203,7 +203,7 @@ int main (int argc, char **argv) {
 	
 	// open sensor for static pressure
 	/// @todo remove hardcoded i2c address static pressure
-	if (ms5611_open(&static_sensor, 0x77) != 0)
+	if (ms5611_open(&static_sensor, 0x76) != 0)
 	{
 		fprintf(stderr, "Open sensor failed !!\n");
 		return 1;
@@ -214,26 +214,26 @@ int main (int argc, char **argv) {
 	
 	// open sensor for velocity pressure
 	/// @todo remove hardcoded i2c address for velocity pressure
-	if (ms5611_open(&pitot_sensor, 0x76) != 0)
+	if (ms5611_open(&tek_sensor, 0x77) != 0)
 	{
 		fprintf(stderr, "Open sensor failed !!\n");
 		return 1;
 	}
 	
 	//initialize velocity pressure sensor
-	ms5611_init(&pitot_sensor);
+	ms5611_init(&tek_sensor);
 	
 	
 	// open sensor for differential pressure
 	/// @todo remove hardcoded i2c address for differential pressure
-	if (ams5915_open(&diff_sensor, 0x28) != 0)
+	if (ams5915_open(&dynamic_sensor, 0x28) != 0)
 	{
 		fprintf(stderr, "Open sensor failed !!\n");
 		return 1;
 	}
 	
 	//initialize differential pressure sensor
-	ams5915_init(&diff_sensor);
+	ams5915_init(&dynamic_sensor);
 	
 	sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock == -1)
@@ -254,14 +254,14 @@ int main (int argc, char **argv) {
 		ms5611_measure(&static_sensor);
 		ms5611_calculate(&static_sensor);
 		
-		ms5611_measure(&pitot_sensor);
-		ms5611_calculate(&pitot_sensor);
+		ms5611_measure(&tek_sensor);
+		ms5611_calculate(&tek_sensor);
 		
-		ams5915_measure(&diff_sensor);
-		ams5915_calculate(&diff_sensor);
+		ams5915_measure(&dynamic_sensor);
+		ams5915_calculate(&dynamic_sensor);
 		
-		//printf("%f,%f,%f,%f\n",0.0, static_sensor.p/100.0, pitot_sensor.p/100.0, diff_sensor.p);
-		log(fp_log,"%ld,%f,%f,%f,%f\n",meas_tick, 0.0, static_sensor.p/100.0, pitot_sensor.p/100.0, diff_sensor.p);
+		//printf("%f,%f,%f,%f\n",0.0, static_sensor.p/100.0, tek_sensor.p/100.0, dynamic_sensor.p);
+		log(fp_log,"%ld,%f,%f,%f,%f\n",meas_tick, 0.0, tek_sensor.p/100.0, static_sensor.p/100.0, dynamic_sensor.p);
 		meas_tick++;
 		
 		dt = (static_sensor.sample.tv_sec + 1.0e-9*static_sensor.sample.tv_nsec)-\
@@ -277,7 +277,7 @@ int main (int argc, char **argv) {
 		
 		//debug_print("Kalman X_ABS: %f, X_VEL: %f\n", kf.x_abs_, kf.x_vel_);
 		
-		Compose_PAFGB_sentence(&s[0], static_sensor.p/100.0, pitot_sensor.p/100.0, 0.0);
+		Compose_PAFGB_sentence(&s[0], static_sensor.p/100.0, tek_sensor.p/100.0, 0.0);
 		
 		//get_temp_ds18b20();
 		
