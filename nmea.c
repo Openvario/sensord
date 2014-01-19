@@ -97,8 +97,8 @@ int Compose_PAFGA_sentence(char *sentence, float roll, float pitch, float mag_he
 /**
 * @brief Implements the $PAFGA NMEA Sentence for fast data
 * @param sentence char pointer for created string
-* @param s_pressure
-* @param v_pressure
+* @param static_pressure
+* @param dynamic_pressure
 * @param tek_pressure
 * @return result
 * 
@@ -106,24 +106,24 @@ int Compose_PAFGA_sentence(char *sentence, float roll, float pitch, float mag_he
 * $PAFGB represents the fast data, meaning the data with medium update rate (2Hz)\n
 * \n
 *
-*     $PAFGB,s_pressure,v_pressure,tek_pressure*CRC
+*     $PAFGB,static_pressure,dynamic_pressure,tek_pressure*CRC
 *                |           |           |
 *                1           2           3
 *
-*     1: $P           Properitary NMEA Sentence
-*        AFG          Manufacturer Code: AkaFliegGraz
-*        B            Sentence B (Slow Data)
+*     1: $P            		Properitary NMEA Sentence
+*        AFG         		Manufacturer Code: AkaFliegGraz
+*        B          		Sentence B (Slow Data)
 *
-*     2: s_pressure   Static pressure (mbar 0.01 resolution ??)
-*                     Format: 1013.11
-*                     Range: 450..1100
+*     2: static_pressure   	Static pressure (mbar 0.01 resolution ??)
+*                     		Format: 1013.11
+*                     		Range: 450..1100
 *     
-*     3: v_pressure   Velocity pressure (mbar 0.01 resolution ??)
-*     Format: 23.34
-*                     Range: 0..50 
+*     3: dynamic_pressure   dynamic pressure (mbar 0.01 resolution ??)
+*     						Format: 23.34
+*                     		Range: 0..50 
 *     
-*     4: tek_pressure Pitot-pressure (Total-Energy-Kompensated)
-*                     ????
+*     4: tek_pressure 		TEK-pressure (Total-Energy-Kompensated)
+*                     		????
 *   
 *     Example:
 *     $PAFGB,,*CRC
@@ -132,24 +132,24 @@ int Compose_PAFGA_sentence(char *sentence, float roll, float pitch, float mag_he
 *
 */ 
 		
-int Compose_PAFGB_sentence(char *sentence, float s_pressure, float v_pressure, float tek_pressure)
+int Compose_PAFGB_sentence(char *sentence, float static_pressure, float dynamic_pressure, float tek_pressure)
 {
 	int length;
 	int success = 1;
 
-	// check s_pressure input value for validity
-	if ((s_pressure < - 0) || (s_pressure > 2000))
+	// check static_pressure input value for validity
+	if ((static_pressure < - 0) || (static_pressure > 2000))
 	{
-		s_pressure = 999;
-		success = 0;
+		static_pressure = 999;
+		success = 10;
 	}
 	
-	// check v_pressure input value for validity
-	/// @todo add useful range for v_pressure vales !!
-	if ((v_pressure < 0) || (v_pressure > 9999))
+	// check dynamic_pressure input value for validity
+	/// @todo add useful range for dynamic_pressure vales !!
+	if ((dynamic_pressure < -999.0) || (dynamic_pressure > 9999.0))
 	{
-		v_pressure = 0.0;
-		success = 0;
+		dynamic_pressure = 0.0;
+		success = 20;
 	}
 	
 	// check tek_pressure Heading input value for validity
@@ -157,11 +157,11 @@ int Compose_PAFGB_sentence(char *sentence, float s_pressure, float v_pressure, f
 	if ((tek_pressure < 0.0) || (tek_pressure > 9999))
 	{
 		tek_pressure = 9999;
-		success = 0;
+		success = 30;
 	}
 	
 	// compose NMEA String
-	length = sprintf(sentence, "$PAFGB,%+07.2f,%+05.2f,%+05.2f", s_pressure, v_pressure, tek_pressure); 
+	length = sprintf(sentence, "$PAFGB,%+07.2f,%+05.2f,%+05.2f", static_pressure, dynamic_pressure, tek_pressure); 
 	
 	// Calculate NMEA checksum and add to string
 	sprintf(sentence + length, "*%02X\n", NMEA_checksum(sentence));
