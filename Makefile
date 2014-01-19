@@ -21,7 +21,7 @@ doc:
 	@echo Running doxygen to create documentation
 	doxygen
 	
-sensordaemon: $(OBJ)
+sensord: $(OBJ)
 	$(CC) $(LIBS) -g -o $@ $^
 
 test: test.o obj/nmea.o
