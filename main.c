@@ -29,81 +29,55 @@
 timer_t  measTimer;
 int g_debug=0;
 int g_log=0;
-FILE *fp_log;
-FILE *fp_console;
+
+int g_foreground=FALSE;
+
+FILE *fp_console=NULL;
+FILE *fp_replay=NULL;
 
 enum e_state { sample_d1, get_d1, sample_d2, get_d2} state;
+typedef enum { measure_only, record, replay} t_measurement_mode;
 	
- void sigintHandler(int sig_num)
- {
+void sigintHandler(int sig_num){
+
 	signal(SIGINT, sigintHandler);
-	if(g_log == 1)
-	{
-		printf("Closing log ...\n");
-		fclose(fp_log);
-	}
-	fclose(fp_console);
+	
+	// if meas_mode = record -> close fp now
+	if (fp_replay != NULL)
+		fclose(fp_replay);
 	
 	printf("Exiting ...\n");
+	fclose(fp_console);
 	exit(0);
- }
+}
  
- 
-int main (int argc, char **argv) {
-	
-	char s[256];
+void cmdline_parser(int argc, char **argv, t_measurement_mode *meas_mode){
+
+	// locale variables
 	int c;
-	long meas_tick=0;
-	
-	pid_t pid;
-	pid_t sid;
+	char replay_filename[50];
 	
 	const char* Usage = "\n"\
     "  -v              print version information\n"\
     "  -d[n]           set debug level. n can be [1..2]. default=1\n"\
-		"  -l              raw measured values to file\n"\
-		"\n";
-	
-	char filename[50]="sensord_measurement.csv";
-	
-	struct sigaction sigact;
-
-	int foreground=FALSE;
-	
-	t_ms5611 static_sensor;
-	t_ms5611 tek_sensor;
-	t_ams5915 dynamic_sensor;
-	
-	t_kalmanfilter1d kf;
-	
-	float tep;
-	float dt;
-	
-	int sock;
-	struct sockaddr_in server;
-	
-	state = sample_d1;
-
-	opterr=0;
+	"  -r [filename]   record measurement values to file\n"\
+	"  -p [filename]   use values from file instead of measuring\n"\
+	"\n";
 	
 	// check commandline arguments
-	while ((c = getopt (argc, argv, "vdf::lh")) != -1)
+	while ((c = getopt (argc, argv, "vd::flhr:p:")) != -1)
 	{
 		switch (c) {
 			case 'v':
 				//sprintf(s, "sensord V0.1 %s %s", __DATE__
 				printf("sensord V%c.%c RELEASE %c build: %s %s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_RELEASE,  __DATE__, __TIME__);
 				break;
-			
-			case 'l':
-			  //logging option on ??
-				printf("!! LOGGER Enabled File=%s !!\n",filename);
-				g_log = 1;
-				break;
 				
 			case 'd':
 				if (optarg == NULL)
-					g_debug = 1;
+				{
+					printf("blub");
+					g_debug = 1;}
 				else
 					g_debug = atoi(optarg);
 				
@@ -111,22 +85,108 @@ int main (int argc, char **argv) {
 				break;
 			case 'f':
 				// don't daemonize
-				printf("!! STAY in FOREGROUND !!\n");
-				foreground = TRUE;
+				printf("!! STAY in g_foreground !!\n");
+				g_foreground = TRUE;
+				break;
+			case 'r':
+				// record sensordata for replay
+				if (optarg == NULL)
+				{
+					printf("Missing option for -r\n");
+					printf("Exiting ...\n");
+					exit(EXIT_FAILURE);
+				}
+				if (*meas_mode == replay)
+				{
+					printf("Wrong mode: record mode and replay mode are mutually exclusive\n");
+					printf("Exiting ...\n");
+					exit(EXIT_FAILURE);
+				}
+				*meas_mode = record;
+				strcpy(replay_filename, optarg);
+				printf("!! RECORD DATA TO %s !!\n", replay_filename);
+				
+				// Open the fp to record file
+				fp_replay = fopen(replay_filename,"w+");
+				break;
+				
+			case 'p':
+				// replay sensordata instead of measuring
+				if (optarg == NULL)
+				{
+					printf("Missing option for -p\n");
+					printf("Exiting ...\n");
+					exit(EXIT_FAILURE);
+				}
+				if (*meas_mode == record)
+				{
+					printf("Wrong mode: record mode and replay mode are mutually exclusive\n");
+					printf("Exiting ...\n");
+					exit(EXIT_FAILURE);
+				}
+				*meas_mode = replay;
+				strcpy(replay_filename, optarg);
+				printf("!! REPLAY DATA FROM %s !!\n", replay_filename);
+				// Open the fp to replay file
+				fp_replay = fopen(replay_filename,"r");
+				if (fp_replay == NULL)
+				{
+					printf("Error opening file %s for replay !!\n", replay_filename);
+					printf("Exiting ...\n");
+					exit(EXIT_FAILURE);
+				}
 				break;
 				
 			case '?':
 				printf("Unknow option %c\n", optopt);
 				printf("Usage: sensord [OPTION]\n%s",Usage);
 				printf("Exiting ...\n");
-				exit(0);
+				exit(EXIT_FAILURE);
 				break;
 		}
 	}
+}
 	
-	// stay in foreground
-	if (foreground == TRUE)
+	
+int main (int argc, char **argv) {
+	
+	// local variables
+	
+	long meas_tick=0;
+	int result;
+		
+	pid_t pid;
+	pid_t sid;
+
+	t_measurement_mode meas_mode=measure_only;
+	
+	struct sigaction sigact;
+
+	// Sensor objects
+	t_ms5611 static_sensor;
+	t_ms5611 tek_sensor;
+	t_ams5915 dynamic_sensor;
+	
+	// Filter objects
+	t_kalmanfilter1d kf;
+	
+	float tep;
+	float dt;
+	
+	// socket communication
+	char s[256];
+	int sock;
+	struct sockaddr_in server;
+	
+	
+	//parse command line arguments
+	cmdline_parser(argc, argv, &meas_mode);
+	
+	// check if we are a daemon or stay in foreground
+	
+	if (g_foreground == TRUE)
 	{
+		// stay in foreground
 		// install signal handler for CTRL-C
 		sigact.sa_handler = sigintHandler;
 		sigemptyset (&sigact.sa_mask);
@@ -191,78 +251,97 @@ int main (int argc, char **argv) {
 	// initialite kalmanfilter
 	KalmanFilter1d_reset(&kf);
 	kf.var_x_accel_ = 0.3;
-	
-	
-	// open logfile if logfile enabled
-	if(g_log == 1)
+		
+	if ((meas_mode == measure_only) || (meas_mode == record))
 	{
-		fp_log = fopen(filename, "w");
-		log(fp_log,"sample,time,0x77,0x76,0x28\n");
+	// we need hardware sensors for running !!
+		// open sensor for static pressure
+		/// @todo remove hardcoded i2c address static pressure
+		if (ms5611_open(&static_sensor, 0x76) != 0)
+		{
+			fprintf(stderr, "Open sensor failed !!\n");
+			return 1;
+		}
+		
+		//initialize static pressure sensor
+		ms5611_init(&static_sensor);
+		
+		// open sensor for velocity pressure
+		/// @todo remove hardcoded i2c address for velocity pressure
+		if (ms5611_open(&tek_sensor, 0x77) != 0)
+		{
+			fprintf(stderr, "Open sensor failed !!\n");
+			return 1;
+		}
+		
+		//initialize velocity pressure sensor
+		ms5611_init(&tek_sensor);
+		
+		
+		// open sensor for differential pressure
+		/// @todo remove hardcoded i2c address for differential pressure
+		if (ams5915_open(&dynamic_sensor, 0x28) != 0)
+		{
+			fprintf(stderr, "Open sensor failed !!\n");
+			return 1;
+		}
+		
+		//initialize differential pressure sensor
+		ams5915_init(&dynamic_sensor);
 	}
 		
-	
-	// open sensor for static pressure
-	/// @todo remove hardcoded i2c address static pressure
-	if (ms5611_open(&static_sensor, 0x76) != 0)
-	{
-		fprintf(stderr, "Open sensor failed !!\n");
-		return 1;
-	}
-	
-	//initialize static pressure sensor
-	ms5611_init(&static_sensor);
-	
-	// open sensor for velocity pressure
-	/// @todo remove hardcoded i2c address for velocity pressure
-	if (ms5611_open(&tek_sensor, 0x77) != 0)
-	{
-		fprintf(stderr, "Open sensor failed !!\n");
-		return 1;
-	}
-	
-	//initialize velocity pressure sensor
-	ms5611_init(&tek_sensor);
-	
-	
-	// open sensor for differential pressure
-	/// @todo remove hardcoded i2c address for differential pressure
-	if (ams5915_open(&dynamic_sensor, 0x28) != 0)
-	{
-		fprintf(stderr, "Open sensor failed !!\n");
-		return 1;
-	}
-	
-	//initialize differential pressure sensor
-	ams5915_init(&dynamic_sensor);
-	
+	// Open Socket for TCP/IP communication
 	sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock == -1)
+	if (sock == -1)
     fprintf(stderr, "could not create socket\n");
   
-  server.sin_addr.s_addr = inet_addr("127.0.0.1");
-  server.sin_family = AF_INET;
-  server.sin_port = htons(4353);
-
-  while (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
-    fprintf(stderr, "failed to connect, trying again\n");
-    fflush(stdout);
-    sleep(1);
-  }
+	server.sin_addr.s_addr = inet_addr("127.0.0.1");
+	server.sin_family = AF_INET;
+	server.sin_port = htons(4353);
 	
+	// try to connect to XCSoar
+	while (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
+		fprintf(stderr, "failed to connect, trying again\n");
+		fflush(stdout);
+		sleep(1);
+	}
+	
+	// main data acquisition loop
 	while (1)
 	{
-		ms5611_measure(&static_sensor);
-		ms5611_calculate(&static_sensor);
+		// get data from sensors
+		if ((meas_mode == measure_only) || (meas_mode == record))
+		{
+			//get data from real sensors
+			ms5611_measure(&static_sensor);
+			ms5611_calculate(&static_sensor);
+			
+			ms5611_measure(&tek_sensor);
+			ms5611_calculate(&tek_sensor);
+			
+			ams5915_measure(&dynamic_sensor);
+			ams5915_calculate(&dynamic_sensor);
+			
+			if (meas_mode == record)
+			{
+				//save values to record file
+				fprintf(fp_replay, "%ld,%ld,%ld,%f\n", meas_tick, tek_sensor.p, static_sensor.p, dynamic_sensor.p);
+				meas_tick++;
+			}
+		}
 		
-		ms5611_measure(&tek_sensor);
-		ms5611_calculate(&tek_sensor);
+		// get data from file instead of sensors
+		else
+		{
+			// read file until it ends, then EXIT
+			if (fscanf(fp_replay, "%ld,%ld,%ld,%f", &meas_tick, &tek_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF)
+			{
+				printf("End of File reached\n");
+				printf("Exiting ...\n");
+				exit(EXIT_SUCCESS);
+			}
+		}
 		
-		ams5915_measure(&dynamic_sensor);
-		ams5915_calculate(&dynamic_sensor);
-		
-		//printf("%f,%f,%f,%f\n",0.0, static_sensor.p/100.0, tek_sensor.p/100.0, dynamic_sensor.p);
-		log(fp_log,"%ld,%f,%f,%f,%f\n",meas_tick, 0.0, tek_sensor.p/100.0, static_sensor.p/100.0, dynamic_sensor.p);
-		meas_tick++;
 		
 		dt = (static_sensor.sample.tv_sec + 1.0e-9*static_sensor.sample.tv_nsec)-\
 					(static_sensor.last_sample.tv_sec + 1.0e-9*static_sensor.last_sample.tv_nsec);
@@ -271,20 +350,30 @@ int main (int argc, char **argv) {
 		
 		static_sensor.last_sample = static_sensor.sample;
 		
-		//debug_print("Pressure: %f  %f\n",tep, dt);
-		
 		//KalmanFiler1d_update(&kf, tep, 0.7, dt);
 		
-		//debug_print("Kalman X_ABS: %f, X_VEL: %f\n", kf.x_abs_, kf.x_vel_);
+		// Compose NMEA sentence
+		result = Compose_PAFGB_sentence(&s[0], static_sensor.p/100.0, dynamic_sensor.p, tek_sensor.p/100.0);
 		
-		Compose_PAFGB_sentence(&s[0], static_sensor.p/100.0, tek_sensor.p/100.0, 0.0);
+		// NMEA sentence valid ?? Otherwise print some error !!
+		if (result != 1)
+		{
+			printf("NMEA Result = %d\n",result);
+		}
 		
-		//get_temp_ds18b20();
-		
+		// Send NMEA string via socket to XCSoar
 		if (send(sock, s, strlen(s), 0) < 0)
-        fprintf(stderr, "send failed\n");
+			fprintf(stderr, "send failed\n");
+			
+		// Sleep until next measurement
 		usleep(440000);
 	}
+	return 0;
+}
+	
+	// Buffer
+	// maybe we need this code sometimes ...
+	
 	/*
   sigemptyset(&sigact.sa_mask);
   sigact.sa_flags = SA_SIGINFO;
@@ -338,9 +427,8 @@ int main (int argc, char **argv) {
 			
 		}
 	}*/
-		return 0;
-
- }
+	
+ 
  
 
  
