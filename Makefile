@@ -27,6 +27,9 @@ sensord: $(OBJ)
 test: test.o obj/nmea.o
 	$(CC) $(LIBS) -g -o $@ $^
 
+sensord_fastsample: sensord_fastsample.o
+	$(CC) $(LIBS) -g -o $@ $^
+	
 clean:
 	rm -f $(ODIR)/*.o *~ core $(EXECUTABLE)
 	rm -fr doc
