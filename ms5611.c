@@ -136,6 +136,7 @@ int ms5611_measure(t_ms5611 *sensor)
 	ddebug_print("D2 = %lu\n", sensor->D2);
 	
 	//save time of sample
+	sensor->last_sample = sensor->sample;
 	clock_gettime( CLOCK_REALTIME, &(sensor->sample));
 	
 	return(0);
