@@ -154,7 +154,7 @@ int ms5611_calculate(t_ms5611 *sensor)
 	sensor->dT = sensor->D2 - sensor->C[4] * pow(2,8);
 	sensor->temp = 2000 + sensor->dT * sensor->C[5] / pow(2,23);
 			
-	ddebug_print("dT = %ld\n", sensor->dT);
+	ddebug_print("dT = %lld\n", sensor->dT);
 	ddebug_print("temp = %ld\n", sensor->temp);
 			
 	// these calculations are copied from the data sheet

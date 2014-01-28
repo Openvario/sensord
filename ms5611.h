@@ -9,7 +9,7 @@ typedef struct {
 	unsigned int C[6];
 	unsigned long int D1;
 	unsigned long int D2;
-	long int dT;
+	long long dT;
 	long int temp;
 	long long int off;
 	long long int sens;
