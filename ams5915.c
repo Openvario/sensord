@@ -46,7 +46,7 @@ int ams5915_init(t_ams5915 *sensor)
 	sensor->digoutpmax = 14745;   // from datasheet
 	sensor->pmin = 0;             // from datasheet
 	sensor->pmax = 50;            // from datasheet
-	
+		
 	sensor->sensp = (sensor->digoutpmax - sensor->digoutpmin)/(sensor->pmax - sensor->pmin); 
 	ddebug_print("AMS5915: sensp=%f\n", sensor->sensp);
 	return(0);
@@ -93,6 +93,9 @@ int ams5915_calculate(t_ams5915 *sensor)
 	
 	// calculate temperature
 	sensor->T = ((sensor->digoutT * 200)/2048)-50;
+	
+	// correct measured pressure
+	sensor->p = sensor->linearity * sensor->p + sensor->offset;
 	
 	debug_print("AMS5915 @ 0x%x: Pressure: %f Temp: %f\n", sensor->address, sensor->p, sensor->T);
 

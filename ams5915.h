@@ -15,6 +15,8 @@ typedef struct {
 	float sensp;
 	float T;
 	float p;
+	float linearity;
+	float offset;
 	struct timespec sample;
 	struct timespec last_sample;
 } t_ams5915;
