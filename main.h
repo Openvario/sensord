@@ -1,0 +1,1 @@
+typedef enum { measure_only, record, replay} t_measurement_mode;

@@ -13,12 +13,13 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #include <syslog.h>
-#include "version.h"
+//#include "version.h"
 #include "nmea.h"
 //#include "w1.h"
 #include "def.h"
 #include "KalmanFilter1d.h"
 
+#include "cmdline_parser.h"
 #include "ms5611.h"
 #include "ams5915.h"
 
@@ -34,9 +35,10 @@ int g_foreground=FALSE;
 
 FILE *fp_console=NULL;
 FILE *fp_replay=NULL;
+FILE *fp_config=NULL;
 
 enum e_state { sample_d1, get_d1, sample_d2, get_d2} state;
-typedef enum { measure_only, record, replay} t_measurement_mode;
+//typedef enum { measure_only, record, replay} t_measurement_mode;
 	
 void sigintHandler(int sig_num){
 
@@ -46,107 +48,17 @@ void sigintHandler(int sig_num){
 	if (fp_replay != NULL)
 		fclose(fp_replay);
 	
+	//close fp_config if used
+	if (fp_config != NULL)
+		fclose(fp_config);
+		
 	printf("Exiting ...\n");
 	fclose(fp_console);
+	
 	exit(0);
 }
  
-void cmdline_parser(int argc, char **argv, t_measurement_mode *meas_mode){
 
-	// locale variables
-	int c;
-	char replay_filename[50];
-	
-	const char* Usage = "\n"\
-    "  -v              print version information\n"\
-    "  -d[n]           set debug level. n can be [1..2]. default=1\n"\
-	"  -r [filename]   record measurement values to file\n"\
-	"  -p [filename]   use values from file instead of measuring\n"\
-	"\n";
-	
-	// check commandline arguments
-	while ((c = getopt (argc, argv, "vd::flhr:p:")) != -1)
-	{
-		switch (c) {
-			case 'v':
-				//sprintf(s, "sensord V0.1 %s %s", __DATE__
-				printf("sensord V%c.%c RELEASE %c build: %s %s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_RELEASE,  __DATE__, __TIME__);
-				break;
-				
-			case 'd':
-				if (optarg == NULL)
-				{
-					printf("blub");
-					g_debug = 1;}
-				else
-					g_debug = atoi(optarg);
-				
-				printf("!! DEBUG LEVEL %d !!\n",g_debug);
-				break;
-			case 'f':
-				// don't daemonize
-				printf("!! STAY in g_foreground !!\n");
-				g_foreground = TRUE;
-				break;
-			case 'r':
-				// record sensordata for replay
-				if (optarg == NULL)
-				{
-					printf("Missing option for -r\n");
-					printf("Exiting ...\n");
-					exit(EXIT_FAILURE);
-				}
-				if (*meas_mode == replay)
-				{
-					printf("Wrong mode: record mode and replay mode are mutually exclusive\n");
-					printf("Exiting ...\n");
-					exit(EXIT_FAILURE);
-				}
-				*meas_mode = record;
-				strcpy(replay_filename, optarg);
-				printf("!! RECORD DATA TO %s !!\n", replay_filename);
-				
-				// Open the fp to record file
-				fp_replay = fopen(replay_filename,"w+");
-				break;
-				
-			case 'p':
-				// replay sensordata instead of measuring
-				if (optarg == NULL)
-				{
-					printf("Missing option for -p\n");
-					printf("Exiting ...\n");
-					exit(EXIT_FAILURE);
-				}
-				if (*meas_mode == record)
-				{
-					printf("Wrong mode: record mode and replay mode are mutually exclusive\n");
-					printf("Exiting ...\n");
-					exit(EXIT_FAILURE);
-				}
-				*meas_mode = replay;
-				strcpy(replay_filename, optarg);
-				printf("!! REPLAY DATA FROM %s !!\n", replay_filename);
-				// Open the fp to replay file
-				fp_replay = fopen(replay_filename,"r");
-				if (fp_replay == NULL)
-				{
-					printf("Error opening file %s for replay !!\n", replay_filename);
-					printf("Exiting ...\n");
-					exit(EXIT_FAILURE);
-				}
-				break;
-				
-			case '?':
-				printf("Unknow option %c\n", optopt);
-				printf("Usage: sensord [OPTION]\n%s",Usage);
-				printf("Exiting ...\n");
-				exit(EXIT_FAILURE);
-				break;
-		}
-	}
-}
-	
 	
 int main (int argc, char **argv) {
 	
@@ -179,11 +91,24 @@ int main (int argc, char **argv) {
 	struct sockaddr_in server;
 	
 	
+	// initialize variables
+	static_sensor.offset = 0.0;
+	static_sensor.linearity = 1.0;
+	
+	dynamic_sensor.offset = 0.0;
+	dynamic_sensor.linearity = 1.0;
+	
+	tek_sensor.offset = 0.0;
+	tek_sensor.linearity = 1.0;
+	
 	//parse command line arguments
 	cmdline_parser(argc, argv, &meas_mode);
 	
-	// check if we are a daemon or stay in foreground
+	// get config file options
+	if (fp_config != NULL)
+		cfgfile_parser(fp_config, &static_sensor, &tek_sensor, &dynamic_sensor);
 	
+	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
 	{
 		// stay in foreground
@@ -265,7 +190,7 @@ int main (int argc, char **argv) {
 		
 		//initialize static pressure sensor
 		ms5611_init(&static_sensor);
-		
+				
 		// open sensor for velocity pressure
 		/// @todo remove hardcoded i2c address for velocity pressure
 		if (ms5611_open(&tek_sensor, 0x77) != 0)
@@ -276,8 +201,7 @@ int main (int argc, char **argv) {
 		
 		//initialize velocity pressure sensor
 		ms5611_init(&tek_sensor);
-		
-		
+				
 		// open sensor for differential pressure
 		/// @todo remove hardcoded i2c address for differential pressure
 		if (ams5915_open(&dynamic_sensor, 0x28) != 0)
@@ -288,6 +212,7 @@ int main (int argc, char **argv) {
 		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
+		
 	}
 		
 	// Open Socket for TCP/IP communication
@@ -325,7 +250,7 @@ int main (int argc, char **argv) {
 			if (meas_mode == record)
 			{
 				//save values to record file
-				fprintf(fp_replay, "%ld,%ld,%ld,%f\n", meas_tick, tek_sensor.p, static_sensor.p, dynamic_sensor.p);
+				fprintf(fp_replay, "%ld,%f,%f,%f\n", meas_tick, tek_sensor.p, static_sensor.p, dynamic_sensor.p);
 				meas_tick++;
 			}
 		}
@@ -334,7 +259,7 @@ int main (int argc, char **argv) {
 		else
 		{
 			// read file until it ends, then EXIT
-			if (fscanf(fp_replay, "%ld,%ld,%ld,%f", &meas_tick, &tek_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF)
+			if (fscanf(fp_replay, "%ld,%f,%f,%f", &meas_tick, &tek_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF)
 			{
 				printf("End of File reached\n");
 				printf("Exiting ...\n");
@@ -343,10 +268,10 @@ int main (int argc, char **argv) {
 		}
 		
 		
-		dt = (static_sensor.sample.tv_sec + 1.0e-9*static_sensor.sample.tv_nsec)-\
+		//dt = (static_sensor.sample.tv_sec + 1.0e-9*static_sensor.sample.tv_nsec)-\
 					(static_sensor.last_sample.tv_sec + 1.0e-9*static_sensor.last_sample.tv_nsec);
 		
-		tep = static_sensor.p/100.0;
+		//tep = static_sensor.p/100.0;
 		
 		static_sensor.last_sample = static_sensor.sample;
 		
