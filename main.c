@@ -277,9 +277,16 @@ int main (int argc, char **argv) {
 		
 		//KalmanFiler1d_update(&kf, tep, 0.7, dt);
 		
-		// Compose NMEA sentence
-		result = Compose_PAFGB_sentence(&s[0], static_sensor.p/100.0, dynamic_sensor.p, tek_sensor.p/100.0);
-		
+#ifdef NMEA_PAFG 
+		// Compose PAFG NMEA sentences
+		result = Compose_PAFGB_sentence(&s[0], static_sensor.p, dynamic_sensor.p, tek_sensor.p);
+#endif
+
+#ifdef NMEA_POV
+		// Compose POV NMEA sentences
+		result = Compose_Pressure_POV_sentence(&s[0], static_sensor.p, dynamic_sensor.p, tek_sensor.p);
+#endif
+
 		// NMEA sentence valid ?? Otherwise print some error !!
 		if (result != 1)
 		{

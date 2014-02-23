@@ -172,6 +172,78 @@ int Compose_PAFGB_sentence(char *sentence, float static_pressure, float dynamic_
 }
  	
 /**
+* @brief Implements the $POV NMEA Sentence for pressure data
+* @param sentence char pointer for created string
+* @param static_pressure
+* @param dynamic_pressure
+* @param tek_pressure // not implemented yet !!
+* @return result
+* 
+* Implementation of the properitary NMEA sentence for AKF Glidecomputer
+* \n
+*
+*     $POV,P,static_pressure,Q,dynamic_pressure*CRC
+*       |  |        |        |         |         
+*       1  2        3        4         5   
+*
+*     1: $P            		Properitary NMEA Sentence
+*        OV         		Manufacturer Code: OpenVario
+*
+*     2: P               	Code for static pressure in hPa
+*     
+*     3: static_pressure    Format: 1013.34
+*                     		Range: 0..50 
+*     
+*     4: Q                  Code for dynamic pressure in Pa
+*
+*     5: dynamic_pressure   Format: 12.34
+* 							Range: -999 .. 999
+*   
+*
+* @date 23.02.2014 born
+*
+*/ 
+		
+int Compose_Pressure_POV_sentence(char *sentence, float static_pressure, float dynamic_pressure, float tek_pressure)
+{
+	int length;
+	int success = 1;
+
+	// check static_pressure input value for validity
+	if ((static_pressure < 0) || (static_pressure > 2000))
+	{
+		static_pressure = 999;
+		success = 10;
+	}
+	
+	// check dynamic_pressure input value for validity
+	/// @todo add useful range for dynamic_pressure vales !!
+	if ((dynamic_pressure < -999.0) || (dynamic_pressure > 9999.0))
+	{
+		dynamic_pressure = 0.0;
+		success = 20;
+	}
+	
+	// check tek_pressure Heading input value for validity
+	/// @todo add useful range for tek_pressure vales !!
+	if ((tek_pressure < 0.0) || (tek_pressure > 9999))
+	{
+		tek_pressure = 9999;
+		success = 30;
+	}
+	
+	// compose NMEA String
+	length = sprintf(sentence, "$POV,P,%+07.2f,Q,%+05.2f", static_pressure, (dynamic_pressure*100)); 
+	
+	// Calculate NMEA checksum and add to string
+	sprintf(sentence + length, "*%02X\n", NMEA_checksum(sentence));
+	
+	//print sentence for debug
+	debug_print("NMEA sentence: %s\n", sentence);
+	return (success);
+}
+
+/**
 * @brief Implements the NMEA Checksum
 * @param char* NMEA string
 * @return int Calculated Checksum for string

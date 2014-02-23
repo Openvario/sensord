@@ -9,6 +9,15 @@ OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 LIBS = -lrt -lm
 ODIR = obj
 
+# Parameters to control program functions
+ifeq ($(NMEA_FLAVOR),POV)
+  CFLAGS += -DNMEA_POV
+  $(info Build with POV NMEA sentence)
+else
+  CFLAGS += -DNMEA_PAFG
+  $(info Build with PAFG NMEA sentence)
+endif
+
 #targets
 
 $(ODIR)/%.o: %.c
