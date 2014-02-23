@@ -203,7 +203,7 @@ int ms5611_calculate(t_ms5611 *sensor)
 			
 	sensor->off = (sensor->C2s + (sensor->C4 * sensor->dT) / 128) - OFF2;
 	sensor->sens = (sensor->C1s + (sensor->C3 * sensor->dT) / 256) - SENS2;
-	sensor->p_meas = (sensor->D1 * sensor->sens / 2097152 - sensor->off) / 32768;
+	sensor->p_meas = ((sensor->D1 * sensor->sens / 2097152 - sensor->off) / 32768)/ 100;
 			
 	// correct measured pressure
 	sensor->p = sensor->linearity * (float)sensor->p_meas + sensor->offset;
