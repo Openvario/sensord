@@ -50,3 +50,8 @@ int ms5611_init(t_ms5611 *);
 int ms5611_measure(t_ms5611 *);
 int ms5611_calculate(t_ms5611 *);
 int ms5611_open(t_ms5611 *, unsigned char);
+
+int ms5611_read_pressure(t_ms5611 *);
+int ms5611_read_temp(t_ms5611 *);
+int ms5611_start_temp(t_ms5611 *);
+int ms5611_start_pressure(t_ms5611 *);
