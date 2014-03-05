@@ -30,6 +30,6 @@ typedef struct {
 	float var_x_accel_;
 	} t_kalmanfilter1d;
 
-void KalmanFiler1d_update(t_kalmanfilter1d* , float , float , long);
+void KalmanFiler1d_update(t_kalmanfilter1d* , float , float , float);
 void KalmanFilter1d_reset(t_kalmanfilter1d*);
 	

@@ -20,7 +20,7 @@
 #include <math.h>
 #include "KalmanFilter1d.h"
 
-void KalmanFiler1d_update(t_kalmanfilter1d* filter, float z_abs, float var_z_abs, long dt)
+void KalmanFiler1d_update(t_kalmanfilter1d* filter, float z_abs, float var_z_abs, float dt)
 {
 	float F1=1.0;
 	float dt2, dt3, dt4;
