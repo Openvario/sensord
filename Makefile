@@ -4,17 +4,17 @@ CC = gcc
 CFLAGS = -g -Wall
 LDFLAGS =
 EXECUTABLE = sensord
-_OBJ = ms5611.o ams5915.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o
+_OBJ = ms5611.o ams5915.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o vario.o AirDensity.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 LIBS = -lrt -lm
 ODIR = obj
 
 # Parameters to control program functions
-ifeq ($(NMEA_FLAVOR),POV)
-  CFLAGS += -DNMEA_POV
+ifeq ($(NMEA_FLAVOR),PAFG)
+  CFLAGS += -DNMEA_PAFG
   $(info Build with POV NMEA sentence)
 else
-  CFLAGS += -DNMEA_PAFG
+  CFLAGS += -DNMEA_POV
   $(info Build with PAFG NMEA sentence)
 endif
 
