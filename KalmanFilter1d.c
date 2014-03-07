@@ -36,9 +36,9 @@ void KalmanFiler1d_update(t_kalmanfilter1d* filter, float z_abs, float var_z_abs
 	filter->x_abs_ += filter->x_vel_ * dt;
 	
 	// update state covariance
-	dt2 = sqrt(dt);
+	dt2 = dt * dt;
 	dt3 = dt * dt2;
-	dt4 = sqrt(dt2);
+	dt4 = dt2 * dt2;
 
 	filter->p_abs_abs_ += 2*(dt*filter->p_abs_vel_) + dt2 * filter->p_vel_vel_ + 0.25*(filter->var_x_accel_ * dt4);
   filter->p_abs_vel_ += dt * filter->p_vel_vel_ + (filter->var_x_accel_ * dt3)/2;
