@@ -40,6 +40,8 @@
 #include "cmdline_parser.h"
 #include "ms5611.h"
 #include "ams5915.h"
+#include "vario.h"
+#include "AirDensity.h"
 
 #define I2C_ADDR 0x76
 #define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
@@ -344,6 +346,8 @@ int main (int argc, char **argv) {
 				ms5611_read_pressure(&static_sensor);
 				ms5611_read_pressure(&tep_sensor);
 				// read AMS5915
+				ams5915_measure(&dynamic_sensor);
+				ams5915_calculate(&dynamic_sensor);
 				
 				/*
 				 * filtering
@@ -373,8 +377,25 @@ int main (int argc, char **argv) {
 		 // is it time to send data to XCSoar ??
 		if((dt=DELTA_TIME_US(t,last_send)) > 1000000/NMEA_SEND_RATE)
 		{
+			// some local variables
+			float vario;
+			float ias;
+			float tas;
+			int altitude;
+			
 			// Compute Vario
-			printf("TEP: %f %f \n",tep_sensor.p, vkf.x_abs_);
+			vario = ComputeVario(vkf.x_abs_, vkf.x_vel_);
+			
+			// Compute Altitude
+			altitude = (int)(44330.8 - 4946.54 *pow((p_static*100), 0.1902632));
+			
+			// Compute IAS
+			ias = sqrt(21.15918367 * (dynamic_sensor.p*100));	// km/h check formula
+			
+			// Compute TAS
+			tas = ias * AirDensityRatio(altitude);
+			
+			printf("x_abs: %f x_vel: %f Vario: %f alt: %d ias: %f tas: %f\n",vkf.x_abs_,vkf.x_vel_,vario, altitude, ias, tas);
 #ifdef NMEA_PAFG 
 			// Compose PAFG NMEA sentences
 			result = Compose_PAFGB_sentence(&s[0], p_static, dynamic_sensor.p, tep_sensor.p);
