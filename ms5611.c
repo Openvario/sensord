@@ -20,6 +20,7 @@
 #include "ms5611.h"
 #include <time.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <math.h>
 #include <time.h>
@@ -112,11 +113,11 @@ int ms5611_init(t_ms5611 *sensor)
 int ms5611_start_temp(t_ms5611 *sensor)
 {
 	//variables
-	struct timespec sample_time;
+	//struct timespec sample_time;
 	unsigned char buf[10]={0x00};
 	
-	sample_time.tv_sec = 0;
-	sample_time.tv_nsec = MS5611_CONVERSIONTIME;
+	//sample_time.tv_sec = 0;
+	//sample_time.tv_nsec = MS5611_CONVERSIONTIME;
 
 	// start conversion for D2
 	buf[0] = 0x58;										// This is the register we want to read from
@@ -131,11 +132,11 @@ int ms5611_start_temp(t_ms5611 *sensor)
 int ms5611_start_pressure(t_ms5611 *sensor)
 {
 	//variables
-	struct timespec sample_time;
+	//struct timespec sample_time;
 	unsigned char buf[10]={0x00};
 	
-	sample_time.tv_sec = 0;
-	sample_time.tv_nsec = MS5611_CONVERSIONTIME;
+	//sample_time.tv_sec = 0;
+	//sample_time.tv_nsec = MS5611_CONVERSIONTIME;
 
 	// start conversion for D1
 	buf[0] = 0x48;													// This is the register we want to read from
@@ -182,7 +183,7 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 {
 	//variables
 	unsigned char buf[10]={0x00};
-	long d2;
+	//long d2;
 	long OFF2=0;
 	long SENS2=0;
 	
@@ -222,22 +223,6 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	
 	return(0);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 int ms5611_measure(t_ms5611 *sensor)
 {
@@ -310,7 +295,7 @@ int ms5611_measure(t_ms5611 *sensor)
 
 int ms5611_calculate(t_ms5611 *sensor)
 {
-	long d2;
+	//long d2;
 	long OFF2=0;
 	long SENS2=0;
 	

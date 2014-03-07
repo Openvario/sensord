@@ -20,6 +20,7 @@
 #include "ams5915.h"
 #include <time.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <math.h>
 #include <time.h>
