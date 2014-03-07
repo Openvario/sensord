@@ -42,9 +42,13 @@
 #include "ams5915.h"
 
 #define I2C_ADDR 0x76
+#define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
+#define TEMP_SAMPLE_RATE 		5	// sample rate of temp values (Hz)
+#define NMEA_SEND_RATE			5	// NMEA send rate (Hz)
  
 #define MEASTIMER (SIGRTMAX)
-
+#define DELTA_TIME_US(T1, T2)	(((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)			
+					
 timer_t  measTimer;
 int g_debug=0;
 int g_log=0;
@@ -55,7 +59,8 @@ FILE *fp_console=NULL;
 FILE *fp_replay=NULL;
 FILE *fp_config=NULL;
 
-enum e_state { sample_d1, get_d1, sample_d2, get_d2} state;
+enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
+
 //typedef enum { measure_only, record, replay} t_measurement_mode;
 	
 void sigintHandler(int sig_num){
@@ -81,10 +86,18 @@ void sigintHandler(int sig_num){
 int main (int argc, char **argv) {
 	
 	// local variables
-	
 	long meas_tick=0;
 	int result;
-		
+	int i=0;
+	
+	// time stamps for statemachine
+	struct timespec t;
+	struct timespec last_temp;
+	struct timespec last_send;
+	struct timespec last_pressure;
+	struct timespec start_timer;
+	
+	// for daemonizing
 	pid_t pid;
 	pid_t sid;
 
@@ -94,13 +107,17 @@ int main (int argc, char **argv) {
 
 	// Sensor objects
 	t_ms5611 static_sensor;
-	t_ms5611 tek_sensor;
+	t_ms5611 tep_sensor;
 	t_ams5915 dynamic_sensor;
 	
 	// Filter objects
-	t_kalmanfilter1d kf;
+	t_kalmanfilter1d vkf;
 	
+	// pressures
 	float tep;
+	float p_static;
+	float p_total;
+	
 	float dt;
 	
 	// socket communication
@@ -116,15 +133,15 @@ int main (int argc, char **argv) {
 	dynamic_sensor.offset = 0.0;
 	dynamic_sensor.linearity = 1.0;
 	
-	tek_sensor.offset = 0.0;
-	tek_sensor.linearity = 1.0;
+	tep_sensor.offset = 0.0;
+	tep_sensor.linearity = 1.0;
 	
 	//parse command line arguments
 	cmdline_parser(argc, argv, &meas_mode);
 	
 	// get config file options
 	if (fp_config != NULL)
-		cfgfile_parser(fp_config, &static_sensor, &tek_sensor, &dynamic_sensor);
+		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor);
 	
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
@@ -143,9 +160,7 @@ int main (int argc, char **argv) {
 		// close the standard file descriptors
 		close(STDIN_FILENO);
 		//close(STDOUT_FILENO);
-		close(STDERR_FILENO);
-		
-		
+		close(STDERR_FILENO);	
 	}
 	else
 	{
@@ -191,9 +206,7 @@ int main (int argc, char **argv) {
 		sigaction(SIGTERM, &sigact, NULL);
 	}
 	
-	// initialite kalmanfilter
-	KalmanFilter1d_reset(&kf);
-	kf.var_x_accel_ = 0.3;
+	
 		
 	if ((meas_mode == measure_only) || (meas_mode == record))
 	{
@@ -211,14 +224,14 @@ int main (int argc, char **argv) {
 				
 		// open sensor for velocity pressure
 		/// @todo remove hardcoded i2c address for velocity pressure
-		if (ms5611_open(&tek_sensor, 0x77) != 0)
+		if (ms5611_open(&tep_sensor, 0x77) != 0)
 		{
 			fprintf(stderr, "Open sensor failed !!\n");
 			return 1;
 		}
 		
-		//initialize velocity pressure sensor
-		ms5611_init(&tek_sensor);
+		//initialize tep pressure sensor
+		ms5611_init(&tep_sensor);
 				
 		// open sensor for differential pressure
 		/// @todo remove hardcoded i2c address for differential pressure
@@ -230,9 +243,27 @@ int main (int argc, char **argv) {
 		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
-		
 	}
+	
+	// poll sensors for offset compensation
+	ms5611_start_temp(&static_sensor);
+	usleep(10000);
+	ms5611_read_temp(&static_sensor);
+	ms5611_start_pressure(&static_sensor);
+	usleep(10000);
+	ms5611_read_pressure(&static_sensor);
+	
+	// initialize variables
+	p_static = static_sensor.p;
+	
+	// initialize kalman filter
+	KalmanFilter1d_reset(&vkf);
+	vkf.var_x_accel_ = 0.3;
+	
+	for(i=0; i < 1000; i++)
+		KalmanFiler1d_update(&vkf, p_static, 0.25, 1);
 		
+	
 	// Open Socket for TCP/IP communication
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == -1)
@@ -252,23 +283,134 @@ int main (int argc, char **argv) {
 	// main data acquisition loop
 	while (1)
 	{
+		// get actual system time
+		clock_gettime(CLOCK_REALTIME, &t);
+		
+		/*
+		 * handle pressure sensors
+		 */
+		switch (state)
+		{
+		case IDLE:
+			// is it time to start temperature measurement??
+			if((dt=DELTA_TIME_US(t,last_temp)) > 1000000/TEMP_SAMPLE_RATE)
+			{
+				// start temperature measurement
+				ms5611_start_temp(&static_sensor);
+				ms5611_start_temp(&tep_sensor);
+				
+				state = TEMP;			// set state for temperature
+				start_timer = t;		// remember timestamp where measurement was started
+				
+				//printf("Sample temp: %f\n",dt);
+			}
+			// is it time to start pressure measurement ??
+			else if ((dt=DELTA_TIME_US(t,last_pressure)) > 1000000/PRESSURE_SAMPLE_RATE)
+			{
+				// start pressure measurement
+				ms5611_start_pressure(&static_sensor);
+				ms5611_start_pressure(&tep_sensor);
+				
+				state = PRESSURE;			//set state for pressure
+				start_timer = t;		// set timer to measurement delay
+				
+				//printf("Sample pressure: %f\n",dt);
+			}
+			break;
+		case TEMP:
+			// check if measurement is done ??
+			if ((dt=DELTA_TIME_US(t,start_timer)) > 10000)
+			{
+				// measurement done
+				// get temperature data
+				ms5611_read_temp(&static_sensor);
+				ms5611_read_temp(&tep_sensor);
+				
+				// save timestamp of measurement
+				last_temp = t;
+				
+				// reset state
+				state = IDLE;
+				
+				//printf("dt: %f\n", dt);
+			}
+			break;
+		case PRESSURE:
+			// check if measurement is done ??
+			if ((dt=DELTA_TIME_US(t,start_timer)) > 10000)
+			{
+				// measurement done
+				// get pressure date
+				ms5611_read_pressure(&static_sensor);
+				ms5611_read_pressure(&tep_sensor);
+				// read AMS5915
+				
+				/*
+				 * filtering
+				 */
+				p_static = (3*p_static + static_sensor.p) / 4;
+				KalmanFiler1d_update(&vkf, tep_sensor.p, 0.25, (DELTA_TIME_US(t,last_pressure)/1000000));
+				printf("dt: %f\n", DELTA_TIME_US(t,last_pressure)/1000000);
+				
+				// save timestamp of measurement
+				last_pressure = t;
+				
+				// reset state
+				state = IDLE;
+			}
+			break;
+		}
+		
+		// send task to idle
+		if (state != IDLE)
+			usleep(1000);
+		else
+			usleep(1000);
+			
+		/*
+		 * send NMEA sentences
+		 */
+		 // is it time to send data to XCSoar ??
+		if((dt=DELTA_TIME_US(t,last_send)) > 1000000/NMEA_SEND_RATE)
+		{
+			// Compute Vario
+			printf("TEP: %f %f \n",tep_sensor.p, vkf.x_abs_);
+#ifdef NMEA_PAFG 
+			// Compose PAFG NMEA sentences
+			result = Compose_PAFGB_sentence(&s[0], p_static, dynamic_sensor.p, tep_sensor.p);
+#endif
+
+#ifdef NMEA_POV
+			// Compose POV NMEA sentences
+			result = Compose_Pressure_POV_sentence(&s[0], p_static, dynamic_sensor.p, tep_sensor.p);
+#endif
+
+			// NMEA sentence valid ?? Otherwise print some error !!
+			if (result != 1)
+			{
+				printf("NMEA Result = %d\n",result);
+			}	
+		
+			// Send NMEA string via socket to XCSoar
+			if (send(sock, s, strlen(s), 0) < 0)
+				fprintf(stderr, "send failed\n");
+			
+			// save timestamp of last send
+			clock_gettime(CLOCK_REALTIME, &last_send);
+		}
+	}
+	return 0;
+}	
+		
+		/*
 		// get data from sensors
 		if ((meas_mode == measure_only) || (meas_mode == record))
 		{
-			//get data from real sensors
-			ms5611_measure(&static_sensor);
-			ms5611_calculate(&static_sensor);
-			
-			ms5611_measure(&tek_sensor);
-			ms5611_calculate(&tek_sensor);
-			
-			ams5915_measure(&dynamic_sensor);
-			ams5915_calculate(&dynamic_sensor);
-			
+						
 			if (meas_mode == record)
 			{
 				//save values to record file
-				fprintf(fp_replay, "%ld,%f,%f,%f\n", meas_tick, tek_sensor.p, static_sensor.p, dynamic_sensor.p);
+				fprintf(fp_replay, "%ld,%f,%f,%f\n", meas_tick, tep_sensor.p, static_sensor.p, dynamic_sensor.p);
 				meas_tick++;
 			}
 		}
@@ -277,7 +419,7 @@ int main (int argc, char **argv) {
 		else
 		{
 			// read file until it ends, then EXIT
-			if (fscanf(fp_replay, "%ld,%f,%f,%f", &meas_tick, &tek_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF)
+			if (fscanf(fp_replay, "%ld,%f,%f,%f", &meas_tick, &tep_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF)
 			{
 				printf("End of File reached\n");
 				printf("Exiting ...\n");
@@ -295,31 +437,15 @@ int main (int argc, char **argv) {
 		
 		//KalmanFiler1d_update(&kf, tep, 0.7, dt);
 		
-#ifdef NMEA_PAFG 
-		// Compose PAFG NMEA sentences
-		result = Compose_PAFGB_sentence(&s[0], static_sensor.p, dynamic_sensor.p, tek_sensor.p);
-#endif
 
-#ifdef NMEA_POV
-		// Compose POV NMEA sentences
-		result = Compose_Pressure_POV_sentence(&s[0], static_sensor.p, dynamic_sensor.p, tek_sensor.p);
-#endif
-
-		// NMEA sentence valid ?? Otherwise print some error !!
-		if (result != 1)
-		{
-			printf("NMEA Result = %d\n",result);
-		}
-		
-		// Send NMEA string via socket to XCSoar
-		if (send(sock, s, strlen(s), 0) < 0)
-			fprintf(stderr, "send failed\n");
 			
 		// Sleep until next measurement
-		usleep(440000);
-	}
-	return 0;
-}
+		//usleep(440000);
+		
+		//clock_gettime(CLOCK_REALTIME, &last_temp);
+		
+		printf("TIME: %f\n", DELTA_TIME_MS(last_temp,t)); */
+
 	
 	// Buffer
 	// maybe we need this code sometimes ...
