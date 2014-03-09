@@ -17,8 +17,8 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.	
 */
 
-#ifndef NMEA.h
-#define NMEA.h 
+#ifndef NMEA_H
+#define NMEA_H 
 
 unsigned char NMEA_checksum(char *);
 int Compose_PAFGA_sentence(char *, float, float, float, float);
