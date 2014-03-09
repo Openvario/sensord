@@ -13,10 +13,10 @@ BINDIR = /opt/bin
 # Parameters to control program functions
 ifeq ($(NMEA_FLAVOR),PAFG)
   CFLAGS += -DNMEA_PAFG
-  $(info Build with POV NMEA sentence)
+  $(info Build with PAFG NMEA sentence)
 else
   CFLAGS += -DNMEA_POV
-  $(info Build with PAFG NMEA sentence)
+  $(info Build with POV NMEA sentence)
 endif
 
 #targets
