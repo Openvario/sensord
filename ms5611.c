@@ -213,7 +213,7 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	sensor->p_meas = (sensor->D1 * sensor->sens / 2097152 - sensor->off) / 32768;
 			
 	// correct measured pressure
-	sensor->p = sensor->linearity * ((float)sensor->p_meas)/100 + sensor->offset;
+	sensor->p = sensor->linearity * (float)(sensor->p_meas + sensor->offset);
 	
 	// some debugging output
 	ddebug_print("off: %lld\n", sensor->off);
