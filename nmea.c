@@ -211,7 +211,7 @@ int Compose_PAFGB_sentence(char *sentence, float static_pressure, float dynamic_
 *     2: P               	Code for static pressure in hPa
 *     
 *     3: static_pressure    Format: 1013.34
-*                     		Range: 0..50 
+*                     		Range: 0..1500 
 *     
 *     4: Q                  Code for dynamic pressure in Pa
 *
@@ -223,7 +223,7 @@ int Compose_PAFGB_sentence(char *sentence, float static_pressure, float dynamic_
 *
 */ 
 		
-int Compose_Pressure_POV_sentence(char *sentence, float static_pressure, float dynamic_pressure, float tek_pressure)
+int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynamic_pressure, float tek_pressure)
 {
 	int length;
 	int success = 1;
@@ -252,7 +252,54 @@ int Compose_Pressure_POV_sentence(char *sentence, float static_pressure, float d
 	}
 	
 	// compose NMEA String
-	length = sprintf(sentence, "$POV,P,%+07.2f,Q,%+05.2f", static_pressure, (dynamic_pressure*100)); 
+	length = sprintf(sentence, "$POV,P,%+07.2f,Q,%+05.2f", static_pressure, (dynamic_pressure)); 
+	
+	// Calculate NMEA checksum and add to string
+	sprintf(sentence + length, "*%02X\n", NMEA_checksum(sentence));
+	
+	//print sentence for debug
+	debug_print("NMEA sentence: %s\n", sentence);
+	return (success);
+}
+
+/**
+* @brief Implements the $POV NMEA Sentence for fast data
+* @param sentence char pointer for created string
+* @param TE vario
+* @return result
+* 
+* Implementation of the properitary NMEA sentence for AKF Glidecomputer
+* \n
+*
+*     $POV,E,TE_vario*CRC
+*       |  |    |      |
+*       1  2    3      4
+*
+*     1: $P            		Properitary NMEA Sentence
+*        OV         		Manufacturer Code: OpenVario
+*
+*     2: E               	Code for TE vario in m/s
+*     
+*     3: TE vario           Format: 3.4
+*
+* @date 09.03.2014 born
+*
+*/ 
+		
+int Compose_Pressure_POV_fast(char *sentence, float te_vario)
+{
+	int length;
+	int success = 1;
+
+	// check te_vario input value for validity
+	/*if ((te_vario < -10) || (te_vario > 10))
+	{
+		te_vario = 99;
+		success = 10;
+	}*/
+	
+	// compose NMEA String
+	length = sprintf(sentence, "$POV,E,%+05.1f", te_vario); 
 	
 	// Calculate NMEA checksum and add to string
 	sprintf(sentence + length, "*%02X\n", NMEA_checksum(sentence));

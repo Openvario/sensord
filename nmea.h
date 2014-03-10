@@ -23,6 +23,7 @@
 unsigned char NMEA_checksum(char *);
 int Compose_PAFGA_sentence(char *, float, float, float, float);
 int Compose_PAFGB_sentence(char *, float, float, float);
-int Compose_Pressure_POV_sentence(char *, float, float, float);
+int Compose_Pressure_POV_slow(char *, float, float, float);
+int Compose_Pressure_POV_fast(char *, float);
 
 #endif
