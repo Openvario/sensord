@@ -1,4 +1,4 @@
-/*  sensord - Sensor Interface for XCSoar Glide COmputer - http://www.openvario.org/
+/*  sensord - Sensor Interface for XCSoar Glide Computer - http://www.openvario.org/
     Copyright (C) 2014  The openvario project
     A detailed list of copyright holders can be found in the file "AUTHORS" 
 
