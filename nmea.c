@@ -223,7 +223,7 @@ int Compose_PAFGB_sentence(char *sentence, float static_pressure, float dynamic_
 *
 */ 
 		
-int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynamic_pressure, float tek_pressure)
+int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynamic_pressure)
 {
 	int length;
 	int success = 1;
@@ -242,15 +242,7 @@ int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynam
 		dynamic_pressure = 0.0;
 		success = 20;
 	}
-	
-	// check tek_pressure Heading input value for validity
-	/// @todo add useful range for tek_pressure vales !!
-	if ((tek_pressure < 0.0) || (tek_pressure > 9999))
-	{
-		tek_pressure = 9999;
-		success = 30;
-	}
-	
+		
 	// compose NMEA String
 	length = sprintf(sentence, "$POV,P,%+07.2f,Q,%+05.2f", static_pressure, (dynamic_pressure)); 
 	
@@ -258,7 +250,7 @@ int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynam
 	sprintf(sentence + length, "*%02X\n", NMEA_checksum(sentence));
 	
 	//print sentence for debug
-	debug_print("NMEA sentence: %s\n", sentence);
+	debug_print("POV slow NMEA sentence: %s\n", sentence);
 	return (success);
 }
 
