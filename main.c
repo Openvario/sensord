@@ -1,4 +1,4 @@
-/*  sensord - Sensor Interface for XCSoar Glide COmputer - http://www.openvario.org/
+/*  sensord - Sensor Interface for XCSoar Glide Computer - http://www.openvario.org/
     Copyright (C) 2014  The openvario project
     A detailed list of copyright holders can be found in the file "AUTHORS" 
 
@@ -38,15 +38,17 @@
 #include "KalmanFilter1d.h"
 
 #include "cmdline_parser.h"
+
 #include "ms5611.h"
 #include "ams5915.h"
+#include "configfile_parser.h"
 #include "vario.h"
 #include "AirDensity.h"
 
 #define I2C_ADDR 0x76
 #define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
 #define TEMP_SAMPLE_RATE 		5	// sample rate of temp values (Hz)
-#define NMEA_SEND_RATE			5	// NMEA send rate (Hz)
+#define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
  
 #define MEASTIMER (SIGRTMAX)
 #define DELTA_TIME_US(T1, T2)	(((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)			
@@ -118,7 +120,7 @@ int main (int argc, char **argv) {
 	// pressures
 	float tep;
 	float p_static;
-	float p_total;
+	float p_dynamic;
 	
 	float dt;
 	
@@ -345,6 +347,7 @@ int main (int argc, char **argv) {
 				// get pressure date
 				ms5611_read_pressure(&static_sensor);
 				ms5611_read_pressure(&tep_sensor);
+								
 				// read AMS5915
 				ams5915_measure(&dynamic_sensor);
 				ams5915_calculate(&dynamic_sensor);
@@ -352,9 +355,19 @@ int main (int argc, char **argv) {
 				/*
 				 * filtering
 				 */
+				 // of static pressure
 				p_static = (3*p_static + static_sensor.p) / 4;
+				 // of tep pressure
 				KalmanFiler1d_update(&vkf, tep_sensor.p, 0.25, (DELTA_TIME_US(t,last_pressure)/1000000));
-				printf("dt: %f\n", DELTA_TIME_US(t,last_pressure)/1000000);
+				//printf("dt: %f\n", DELTA_TIME_US(t,last_pressure)/1000000);
+				 // of dynamic pressure
+				p_dynamic = (3*p_dynamic + dynamic_sensor.p) / 4;
+				
+				// write pressure to file if option is set
+				if (meas_mode == record)
+				{
+					fprintf(fp_replay, "%f,%f,%f\n", vkf.x_abs_, p_static, p_dynamic);
+				}
 				
 				// save timestamp of measurement
 				last_pressure = t;
@@ -371,11 +384,11 @@ int main (int argc, char **argv) {
 		else
 			usleep(1000);
 			
-		/*
+		/*f
 		 * send NMEA sentences
 		 */
 		 // is it time to send data to XCSoar ??
-		if((dt=DELTA_TIME_US(t,last_send)) > 1000000/NMEA_SEND_RATE)
+		if((dt=DELTA_TIME_US(t,last_send)) > 1000000/NMEA_SLOW_SEND_RATE)
 		{
 			// some local variables
 			float vario;
@@ -395,17 +408,13 @@ int main (int argc, char **argv) {
 			// Compute TAS
 			tas = ias * AirDensityRatio(altitude);
 			
-			printf("x_abs: %f x_vel: %f Vario: %f alt: %d ias: %f tas: %f\n",vkf.x_abs_,vkf.x_vel_,vario, altitude, ias, tas);
+			//printf("x_abs: %f x_vel: %f speed: %f Vario: %f alt: %d ias: %f tas: %f\n",vkf.x_abs_,vkf.x_vel_,p_dynamic, vario, altitude, ias, tas);
+			//printf("NMEA dt: %f\n", dt);
+			
 #ifdef NMEA_PAFG 
 			// Compose PAFG NMEA sentences
 			result = Compose_PAFGB_sentence(&s[0], p_static, dynamic_sensor.p, tep_sensor.p);
-#endif
-
-#ifdef NMEA_POV
-			// Compose POV NMEA sentences
-			result = Compose_Pressure_POV_sentence(&s[0], p_static, dynamic_sensor.p, tep_sensor.p);
-#endif
-
+			
 			// NMEA sentence valid ?? Otherwise print some error !!
 			if (result != 1)
 			{
@@ -415,7 +424,37 @@ int main (int argc, char **argv) {
 			// Send NMEA string via socket to XCSoar
 			if (send(sock, s, strlen(s), 0) < 0)
 				fprintf(stderr, "send failed\n");
+#endif
+
+#ifdef NMEA_POV
+			// Compose POV slow NMEA sentences
+			result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
+
+			// NMEA sentence valid ?? Otherwise print some error !!
+			if (result != 1)
+			{
+				printf("POV slow NMEA Result = %d\n",result);
+			}	
+		
+			// Send NMEA string via socket to XCSoar
+			if (send(sock, s, strlen(s), 0) < 0)
+				fprintf(stderr, "send failed\n");
 			
+			
+			// Compose POV slow NMEA sentences
+			result = Compose_Pressure_POV_fast(&s[0], vario);
+			
+			// NMEA sentence valid ?? Otherwise print some error !!
+			if (result != 1)
+			{
+				printf("POV fast NMEA Result = %d\n",result);
+			}	
+		
+			// Send NMEA string via socket to XCSoar
+			if (send(sock, s, strlen(s), 0) < 0)
+				fprintf(stderr, "send failed\n");
+#endif
+
 			// save timestamp of last send
 			clock_gettime(CLOCK_REALTIME, &last_send);
 		}
