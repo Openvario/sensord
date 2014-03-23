@@ -17,6 +17,7 @@
 */
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <fcntl.h>
 #include <linux/i2c-dev.h>
 #include <errno.h>
@@ -60,7 +61,8 @@ int g_log=0;
 int g_foreground=FALSE;
 
 FILE *fp_console=NULL;
-FILE *fp_replay=NULL;
+FILE *fp_sensordata=NULL;
+FILE *fp_datalog=NULL;
 FILE *fp_config=NULL;
 
 enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
@@ -72,9 +74,13 @@ void sigintHandler(int sig_num){
 	signal(SIGINT, sigintHandler);
 	
 	// if meas_mode = record -> close fp now
-	if (fp_replay != NULL)
-		fclose(fp_replay);
+	if (fp_datalog != NULL)
+		fclose(fp_datalog);
 	
+	// if sensordata from file
+	if (fp_sensordata != NULL)
+		fclose(fp_sensordata);
+		
 	//close fp_config if used
 	if (fp_config != NULL)
 		fclose(fp_config);
@@ -105,7 +111,9 @@ int main (int argc, char **argv) {
 	pid_t pid;
 	pid_t sid;
 
-	t_measurement_mode meas_mode=measure_only;
+	t_io_mode io_mode;
+	io_mode.sensordata_from_file = FALSE;
+	io_mode.sensordata_to_file = FALSE;
 	
 	struct sigaction sigact;
 
@@ -141,7 +149,7 @@ int main (int argc, char **argv) {
 	tep_sensor.linearity = 1.0;
 	
 	//parse command line arguments
-	cmdline_parser(argc, argv, &meas_mode);
+	cmdline_parser(argc, argv, &io_mode);
 	
 	// get config file options
 	if (fp_config != NULL)
@@ -212,7 +220,7 @@ int main (int argc, char **argv) {
 	
 	
 		
-	if ((meas_mode == measure_only) || (meas_mode == record))
+	if (io_mode.sensordata_from_file != TRUE)
 	{
 	// we need hardware sensors for running !!
 		// open sensor for static pressure
@@ -247,18 +255,22 @@ int main (int argc, char **argv) {
 		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
+		
+		// poll sensors for offset compensation
+		ms5611_start_temp(&static_sensor);
+		usleep(10000);
+		ms5611_read_temp(&static_sensor);
+		ms5611_start_pressure(&static_sensor);
+		usleep(10000);
+		ms5611_read_pressure(&static_sensor);
+		
+		// initialize variables
+		p_static = static_sensor.p;
 	}
-	
-	// poll sensors for offset compensation
-	ms5611_start_temp(&static_sensor);
-	usleep(10000);
-	ms5611_read_temp(&static_sensor);
-	ms5611_start_pressure(&static_sensor);
-	usleep(10000);
-	ms5611_read_pressure(&static_sensor);
-	
-	// initialize variables
-	p_static = static_sensor.p;
+	else
+	{
+		p_static = 101300.0;
+	}
 	
 	// initialize kalman filter
 	KalmanFilter1d_reset(&vkf);
@@ -299,9 +311,12 @@ int main (int argc, char **argv) {
 			// is it time to start temperature measurement??
 			if((dt=DELTA_TIME_US(t,last_temp)) > 1000000/TEMP_SAMPLE_RATE)
 			{
-				// start temperature measurement
-				ms5611_start_temp(&static_sensor);
-				ms5611_start_temp(&tep_sensor);
+				if (io_mode.sensordata_from_file != TRUE)
+				{
+					// start temperature measurement
+					ms5611_start_temp(&static_sensor);
+					ms5611_start_temp(&tep_sensor);
+				}
 				
 				state = TEMP;			// set state for temperature
 				start_timer = t;		// remember timestamp where measurement was started
@@ -310,47 +325,69 @@ int main (int argc, char **argv) {
 			}
 			// is it time to start pressure measurement ??
 			else if ((dt=DELTA_TIME_US(t,last_pressure)) > 1000000/PRESSURE_SAMPLE_RATE)
-			{
-				// start pressure measurement
-				ms5611_start_pressure(&static_sensor);
-				ms5611_start_pressure(&tep_sensor);
+			{	
+				if (io_mode.sensordata_from_file != TRUE)
+				{
+					// start pressure measurement
+					ms5611_start_pressure(&static_sensor);
+					ms5611_start_pressure(&tep_sensor);
+				}	
 				
 				state = PRESSURE;			//set state for pressure
 				start_timer = t;		// set timer to measurement delay
-				
-				//printf("Sample pressure: %f\n",dt);
+					
+				//printf("Sample pressure: %f\n",dt);				
 			}
 			break;
 		case TEMP:
 			// check if measurement is done ??
 			if ((dt=DELTA_TIME_US(t,start_timer)) > 10000)
 			{
-				// measurement done
-				// get temperature data
-				ms5611_read_temp(&static_sensor);
-				ms5611_read_temp(&tep_sensor);
+				if (io_mode.sensordata_from_file != TRUE)
+				{
+					// measurement done
+					// get temperature data
+					ms5611_read_temp(&static_sensor);
+					ms5611_read_temp(&tep_sensor);
+				}	
 				
 				// save timestamp of measurement
 				last_temp = t;
-				
+					
 				// reset state
 				state = IDLE;
-				
+					
 				//printf("dt: %f\n", dt);
 			}
 			break;
 		case PRESSURE:
 			// check if measurement is done ??
 			if ((dt=DELTA_TIME_US(t,start_timer)) > 10000)
-			{
-				// measurement done
-				// get pressure date
-				ms5611_read_pressure(&static_sensor);
-				ms5611_read_pressure(&tep_sensor);
+			{	
+				// read data from file
+				if(io_mode.sensordata_from_file ==  TRUE)
+				{
+					// read file until it ends, then EXIT
+					if (fscanf(fp_sensordata, "%f,%f,%f", &tep_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF)
+					{
+						printf("End of File reached\n");
+						printf("Exiting ...\n");
+						exit(EXIT_SUCCESS);
+					}
+				}
+				
+				// read data from real hardware
+				else
+				{
+					// measurement done
+					// get pressure date
+					ms5611_read_pressure(&static_sensor);
+					ms5611_read_pressure(&tep_sensor);
 								
-				// read AMS5915
-				ams5915_measure(&dynamic_sensor);
-				ams5915_calculate(&dynamic_sensor);
+					// read AMS5915
+					ams5915_measure(&dynamic_sensor);
+					ams5915_calculate(&dynamic_sensor);
+				}								
 				
 				/*
 				 * filtering
@@ -363,11 +400,11 @@ int main (int argc, char **argv) {
 				 // of dynamic pressure
 				p_dynamic = (3*p_dynamic + dynamic_sensor.p) / 4;
 				
-				// write pressure to file if option is set
+				/*// write pressure to file if option is set
 				if (meas_mode == record)
 				{
-					fprintf(fp_replay, "%f,%f,%f\n", vkf.x_abs_, p_static, p_dynamic);
-				}
+					fprintf(fp_replay, "%f,%f,%f,%f,%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p, vkf.x_abs_, p_static, p_dynamic, vario);
+				}*/	
 				
 				// save timestamp of measurement
 				last_pressure = t;
@@ -408,6 +445,12 @@ int main (int argc, char **argv) {
 			// Compute TAS
 			tas = ias * AirDensityRatio(altitude);
 			
+			if (io_mode.sensordata_to_file == TRUE)
+			{
+				fprintf(fp_datalog, "%f,%f,%f,%f,%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p, vkf.x_abs_, p_static, p_dynamic, vario);
+			}
+				
+			//fprintf(fp_replay, "%f,%f,%f,%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p, vkf.x_abs_, p_static, p_dynamic);
 			//printf("x_abs: %f x_vel: %f speed: %f Vario: %f alt: %d ias: %f tas: %f\n",vkf.x_abs_,vkf.x_vel_,p_dynamic, vario, altitude, ias, tas);
 			//printf("NMEA dt: %f\n", dt);
 			
@@ -429,7 +472,7 @@ int main (int argc, char **argv) {
 #ifdef NMEA_POV
 			// Compose POV slow NMEA sentences
 			result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
-
+			printf("%s",s);
 			// NMEA sentence valid ?? Otherwise print some error !!
 			if (result != 1)
 			{
@@ -440,10 +483,9 @@ int main (int argc, char **argv) {
 			if (send(sock, s, strlen(s), 0) < 0)
 				fprintf(stderr, "send failed\n");
 			
-			
 			// Compose POV slow NMEA sentences
 			result = Compose_Pressure_POV_fast(&s[0], vario);
-			
+			printf("%s",s);
 			// NMEA sentence valid ?? Otherwise print some error !!
 			if (result != 1)
 			{

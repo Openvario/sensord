@@ -17,4 +17,8 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.	
 */
 
-typedef enum { measure_only, record, replay} t_measurement_mode;
+typedef struct 
+{ 	
+	char sensordata_to_file;
+	char sensordata_from_file;
+} t_io_mode;

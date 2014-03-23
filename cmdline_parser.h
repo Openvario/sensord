@@ -19,4 +19,4 @@
 
 #include "main.h"
 
-void cmdline_parser(int argc, char **argv, t_measurement_mode *);
+void cmdline_parser(int argc, char **argv, t_io_mode *);
