@@ -472,7 +472,7 @@ int main (int argc, char **argv) {
 #ifdef NMEA_POV
 			// Compose POV slow NMEA sentences
 			result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
-			printf("%s",s);
+			//printf("%s",s);
 			// NMEA sentence valid ?? Otherwise print some error !!
 			if (result != 1)
 			{
@@ -485,7 +485,7 @@ int main (int argc, char **argv) {
 			
 			// Compose POV slow NMEA sentences
 			result = Compose_Pressure_POV_fast(&s[0], vario);
-			printf("%s",s);
+			//printf("%s",s);
 			// NMEA sentence valid ?? Otherwise print some error !!
 			if (result != 1)
 			{
