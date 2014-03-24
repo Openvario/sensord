@@ -437,13 +437,13 @@ int main (int argc, char **argv) {
 			vario = ComputeVario(vkf.x_abs_, vkf.x_vel_);
 			
 			// Compute Altitude
-			altitude = (int)(44330.8 - 4946.54 *pow((p_static*100), 0.1902632));
+			//altitude = (int)(44330.8 - 4946.54 *pow((p_static*100), 0.1902632));
 			
 			// Compute IAS
-			ias = sqrt(21.15918367 * (dynamic_sensor.p*100));	// km/h check formula
+			ias = sqrt(21.15918367 * (dynamic_sensor.p*100));	// km/h
 			
 			// Compute TAS
-			tas = ias * AirDensityRatio(altitude);
+			//tas = ias * AirDensityRatio(altitude);
 			
 			if (io_mode.sensordata_to_file == TRUE)
 			{
