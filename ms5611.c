@@ -122,7 +122,7 @@ int ms5611_start_temp(t_ms5611 *sensor)
 	// start conversion for D2
 	buf[0] = 0x58;										// This is the register we want to read from
 	if ((write(sensor->fd, buf, 1)) != 1) {				// Send register we want to read from	
-		printf("Error writing to i2c slave\n");
+		printf("Error writing to i2c slave (%s)\n", __func__);
 		return(1);
 	}
 	
@@ -156,12 +156,12 @@ int ms5611_read_temp(t_ms5611 *sensor)
 	// read result
 	buf[0] = 0x00;
 	if ((write(sensor->fd, buf, 1)) != 1) {								// Send register we want to read from	
-		printf("Error writing to i2c slave\n");
+		printf("Error writing to i2c slave(%s)\n", __func__);
 		return(1);
 	}
 	
 	if (read(sensor->fd, buf, 3) != 3) {								// Read back data into buf[]
-		printf("Unable to read from slave\n");
+		printf("Unable to read from slave(%s)\n", __func__);
 		return(1);
 	}
 	
@@ -190,12 +190,12 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	// read result
 	buf[0] = 0x00;
 	if ((write(sensor->fd, buf, 1)) != 1) {								// Send register we want to read from	
-		printf("Error writing to i2c slave: write Read result\n");
+		printf("Error writing to i2c slave: write Read result(%s)\n", __func__);
 		return(1);
 	}
 	
 	if (read(sensor->fd, buf, 3) != 3) {								// Read back data into buf[]
-		printf("Unable to read from slave: read result\n");
+		printf("Unable to read from slave: read result(%s)\n", __func__);
 		return(1);
 	}
 	
@@ -247,12 +247,12 @@ int ms5611_measure(t_ms5611 *sensor)
 	// read result
 	buf[0] = 0x00;
 	if ((write(sensor->fd, buf, 1)) != 1) {								// Send register we want to read from	
-		printf("Error writing to i2c slave: write Read result\n");
+		printf("Error writing to i2c slave: write Read result(%s)\n", __func__);
 		return(1);
 	}
 	
 	if (read(sensor->fd, buf, 3) != 3) {								// Read back data into buf[]
-		printf("Unable to read from slave: read result\n");
+		printf("Unable to read from slave: read result(%s)\n", __func__);
 		return(1);
 	}
 	
@@ -273,7 +273,7 @@ int ms5611_measure(t_ms5611 *sensor)
 	// read result
 	buf[0] = 0x00;
 	if ((write(sensor->fd, buf, 1)) != 1) {								// Send register we want to read from	
-		printf("Error writing to i2c slave\n");
+		printf("Error writing to i2c slave(%s)\n", __func__);
 		return(1);
 	}
 	
