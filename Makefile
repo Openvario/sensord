@@ -35,7 +35,7 @@ sensord: $(OBJ)
 	$(CC) $(LIBS) -g -o $@ $^
 	
 install: sensord
-	install -D sensord $(BINDIR)
+	install -D sensord $(BINDIR)/$(EXECUTABLE)
 	
 test: test.o obj/nmea.o
 	$(CC) $(LIBS) -g -o $@ $^
