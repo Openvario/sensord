@@ -8,7 +8,7 @@ _OBJ = ms5611.o ams5915.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 LIBS = -lrt -lm
 ODIR = obj
-BINDIR = /opt/bin
+BINDIR = /opt/bin/
 
 # Parameters to control program functions
 ifeq ($(NMEA_FLAVOR),PAFG)
@@ -35,7 +35,7 @@ sensord: $(OBJ)
 	$(CC) $(LIBS) -g -o $@ $^
 	
 install: sensord
-	install sensord $(BINDIR)
+	install -D sensord $(BINDIR)
 	
 test: test.o obj/nmea.o
 	$(CC) $(LIBS) -g -o $@ $^
