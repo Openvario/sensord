@@ -30,6 +30,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <arpa/inet.h>
 #include <syslog.h>
 //#include "version.h"
@@ -58,7 +59,22 @@ timer_t  measTimer;
 int g_debug=0;
 int g_log=0;
 
+// Sensor objects
+t_ms5611 static_sensor;
+t_ms5611 tep_sensor;
+t_ams5915 dynamic_sensor;
+	
+// Filter objects
+t_kalmanfilter1d vkf;
+	
+// pressures
+float tep;
+float p_static;
+float p_dynamic;
+
 int g_foreground=FALSE;
+
+t_io_mode io_mode;
 
 FILE *fp_console=NULL;
 FILE *fp_sensordata=NULL;
@@ -68,7 +84,17 @@ FILE *fp_config=NULL;
 enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
 
 //typedef enum { measure_only, record, replay} t_measurement_mode;
-	
+
+/**
+* @brief Signal handler if sensord will be interrupted
+* @param sig_num
+* @return 
+* 
+* Signal handler for catching STRG-C singal from command line
+* Closes all open files handles like log files
+* @date 17.04.2014 born
+*
+*/ 
 void sigintHandler(int sig_num){
 
 	signal(SIGINT, sigintHandler);
@@ -90,53 +116,163 @@ void sigintHandler(int sig_num){
 	
 	exit(0);
 }
- 
 
+
+/**
+* @brief Command handler for NMEA messages
+* @param sock Network socket handler
+* @return 
+* 
+* Message handler called by main-loop to generate timing of NMEA messages
+* @date 17.04.2014 born
+*
+*/ 
+void NMEA_message_handler(int sock)
+{
+	// some local variables
+	float vario;
+	static int nmea_counter = 1;
+	int result;
+	char s[256];
+	
+	switch (nmea_counter)
+	{
+		case 40:
+			// Compute Vario
+			vario = ComputeVario(vkf.x_abs_, vkf.x_vel_);
+			
+			// Compose POV slow NMEA sentences
+			result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
+			//printf("%s",s);
+			// NMEA sentence valid ?? Otherwise print some error !!
+			if (result != 1)
+			{
+				printf("POV slow NMEA Result = %d\n",result);
+			}	
+		
+			// Send NMEA string via socket to XCSoar
+			if (send(sock, s, strlen(s), 0) < 0)
+				fprintf(stderr, "send failed\n");
+			
+			// Compose POV slow NMEA sentences
+			result = Compose_Pressure_POV_fast(&s[0], vario);
+			//printf("%s",s);
+			// NMEA sentence valid ?? Otherwise print some error !!
+			if (result != 1)
+			{
+				printf("POV fast NMEA Result = %d\n",result);
+			}	
+		
+			// Send NMEA string via socket to XCSoar
+			if (send(sock, s, strlen(s), 0) < 0)
+				fprintf(stderr, "send failed\n");
+				
+			break;
+		default:
+			break;
+	}
+	
+	// take care for statemachine counter
+	if (nmea_counter == 40)
+			nmea_counter = 1;
+		else
+			nmea_counter++;
+		
+}
+
+/**
+* @brief Timming routine for pressure measurement
+* @param 
+* @return 
+* 
+* Timing handler to coordinate pressure measurement
+* @date 17.04.2014 born
+*
+*/ 
+void pressure_measurement_handler(void)
+{
+	static int meas_counter = 1;
+	switch (meas_counter)
+	{
+		case 1:
+		case 5:
+		case 9:
+		case 13:
+		case 17:
+		case 21:
+		case 25:
+		case 29:
+		case 33:
+		case 37:
+			// start pressure measurement
+			ms5611_start_pressure(&static_sensor);
+			ms5611_start_pressure(&tep_sensor);
+			break;
+		
+		case 2:
+		case 6:
+		case 10:
+		case 14:
+		case 18:
+		case 22:
+		case 26:
+		case 30:
+		case 34:
+		case 38:
+			// read pressure values
+			ms5611_read_pressure(&static_sensor);
+			ms5611_read_pressure(&tep_sensor);
+						
+			// read AMS5915
+			ams5915_measure(&dynamic_sensor);
+			ams5915_calculate(&dynamic_sensor);
+			
+			//
+			// filtering
+			//
+			// of static pressure
+			p_static = (3*p_static + static_sensor.p) / 4;
+			
+			// of tep pressure
+			KalmanFiler1d_update(&vkf, tep_sensor.p, 0.25, 0.05);
+			
+			// of dynamic pressure
+			p_dynamic = (3*p_dynamic + dynamic_sensor.p) / 4;
+			
+			// write pressure to file if option is set
+			if (io_mode.sensordata_to_file == TRUE)
+			{
+				//fprintf(fp_datalog, "%f,%f\n",  tep_sensor.p, static_sensor.p);
+				fprintf(fp_datalog, "%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p);
+			}
+			break;
+	}
+	
+	// take care for statemachine counter
+	if (meas_counter == 40)
+			meas_counter = 1;
+		else
+			meas_counter++;
+}
 	
 int main (int argc, char **argv) {
 	
 	// local variables
-	long meas_tick=0;
-	int result;
 	int i=0;
-	
-	// time stamps for statemachine
-	struct timespec t;
-	struct timespec last_temp;
-	struct timespec last_send;
-	struct timespec last_pressure;
-	struct timespec start_timer;
 	
 	// for daemonizing
 	pid_t pid;
 	pid_t sid;
 
-	t_io_mode io_mode;
 	io_mode.sensordata_from_file = FALSE;
 	io_mode.sensordata_to_file = FALSE;
 	
+	// signals and action handlers
 	struct sigaction sigact;
-
-	// Sensor objects
-	t_ms5611 static_sensor;
-	t_ms5611 tep_sensor;
-	t_ams5915 dynamic_sensor;
-	
-	// Filter objects
-	t_kalmanfilter1d vkf;
-	
-	// pressures
-	float tep;
-	float p_static;
-	float p_dynamic;
-	
-	float dt;
 	
 	// socket communication
-	char s[256];
 	int sock;
 	struct sockaddr_in server;
-	
 	
 	// initialize variables
 	static_sensor.offset = 0.0;
@@ -154,6 +290,7 @@ int main (int argc, char **argv) {
 	// get config file options
 	if (fp_config != NULL)
 		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor);
+	
 	
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
@@ -198,8 +335,8 @@ int main (int argc, char **argv) {
 		/* Try to create our own process group */
 		sid = setsid();
 		if (sid < 0) {
-		syslog(LOG_ERR, "Could not create process group\n");
-		exit(EXIT_FAILURE);
+			syslog(LOG_ERR, "Could not create process group\n");
+			exit(EXIT_FAILURE);
 		}
 		
 		// close the standard file descriptors
@@ -210,19 +347,11 @@ int main (int argc, char **argv) {
 		//open file for log output
 		fp_console = fopen("sensord.log","w+");
 		stderr = fp_console;
-		
-		// install SIGTERM handler
-		sigact.sa_handler = sigintHandler;
-		sigemptyset (&sigact.sa_mask);
-		sigact.sa_flags = 0;
-		sigaction(SIGTERM, &sigact, NULL);
 	}
-	
-	
 		
 	if (io_mode.sensordata_from_file != TRUE)
 	{
-	// we need hardware sensors for running !!
+		// we need hardware sensors for running !!
 		// open sensor for static pressure
 		/// @todo remove hardcoded i2c address static pressure
 		if (ms5611_open(&static_sensor, 0x76) != 0)
@@ -279,11 +408,10 @@ int main (int argc, char **argv) {
 	for(i=0; i < 1000; i++)
 		KalmanFiler1d_update(&vkf, p_static, 0.25, 1);
 		
-	
 	// Open Socket for TCP/IP communication
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == -1)
-    fprintf(stderr, "could not create socket\n");
+		fprintf(stderr, "could not create socket\n");
   
 	server.sin_addr.s_addr = inet_addr("127.0.0.1");
 	server.sin_family = AF_INET;
@@ -297,14 +425,30 @@ int main (int argc, char **argv) {
 	}
 	
 	// main data acquisition loop
-	while (1)
+	while(1)
+	{	int result;
+	
+		result = usleep(12500);
+		if (result != 0)
+		{
+			printf("usleep error\n");
+			usleep(12500);
+		}
+		pressure_measurement_handler();
+		NMEA_message_handler(sock);
+	}
+	
+	return 0;
+}	
+
+/*	while (1)
 	{
 		// get actual system time
 		clock_gettime(CLOCK_REALTIME, &t);
 		
-		/*
-		 * handle pressure sensors
-		 */
+		//
+		// handle pressure sensors
+		//
 		switch (state)
 		{
 		case IDLE:
@@ -389,9 +533,9 @@ int main (int argc, char **argv) {
 					ams5915_calculate(&dynamic_sensor);
 				}								
 				
-				/*
-				 * filtering
-				 */
+				//
+				// filtering
+				//
 				 // of static pressure
 				p_static = (3*p_static + static_sensor.p) / 4;
 				 // of tep pressure
@@ -400,11 +544,11 @@ int main (int argc, char **argv) {
 				 // of dynamic pressure
 				p_dynamic = (3*p_dynamic + dynamic_sensor.p) / 4;
 				
-				/*// write pressure to file if option is set
+				// write pressure to file if option is set
 				if (meas_mode == record)
 				{
 					fprintf(fp_replay, "%f,%f,%f,%f,%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p, vkf.x_abs_, p_static, p_dynamic, vario);
-				}*/	
+				}
 				
 				// save timestamp of measurement
 				last_pressure = t;
@@ -421,20 +565,18 @@ int main (int argc, char **argv) {
 		else
 			usleep(1000);
 			
-		/*f
-		 * send NMEA sentences
-		 */
+		//
+		// send NMEA sentences
+		//
 		 // is it time to send data to XCSoar ??
 		if((dt=DELTA_TIME_US(t,last_send)) > 1000000/NMEA_SLOW_SEND_RATE)
 		{
-			// some local variables
-			float vario;
+			
 			float ias;
 			float tas;
 			int altitude;
 			
-			// Compute Vario
-			vario = ComputeVario(vkf.x_abs_, vkf.x_vel_);
+			
 			
 			// Compute Altitude
 			//altitude = (int)(44330.8 - 4946.54 *pow((p_static*100), 0.1902632));
@@ -454,55 +596,8 @@ int main (int argc, char **argv) {
 			//printf("x_abs: %f x_vel: %f speed: %f Vario: %f alt: %d ias: %f tas: %f\n",vkf.x_abs_,vkf.x_vel_,p_dynamic, vario, altitude, ias, tas);
 			//printf("NMEA dt: %f\n", dt);
 			
-#ifdef NMEA_PAFG 
-			// Compose PAFG NMEA sentences
-			result = Compose_PAFGB_sentence(&s[0], p_static, dynamic_sensor.p, tep_sensor.p);
-			
-			// NMEA sentence valid ?? Otherwise print some error !!
-			if (result != 1)
-			{
-				printf("NMEA Result = %d\n",result);
-			}	
-		
-			// Send NMEA string via socket to XCSoar
-			if (send(sock, s, strlen(s), 0) < 0)
-				fprintf(stderr, "send failed\n");
-#endif
+	} */
 
-#ifdef NMEA_POV
-			// Compose POV slow NMEA sentences
-			result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
-			//printf("%s",s);
-			// NMEA sentence valid ?? Otherwise print some error !!
-			if (result != 1)
-			{
-				printf("POV slow NMEA Result = %d\n",result);
-			}	
-		
-			// Send NMEA string via socket to XCSoar
-			if (send(sock, s, strlen(s), 0) < 0)
-				fprintf(stderr, "send failed\n");
-			
-			// Compose POV slow NMEA sentences
-			result = Compose_Pressure_POV_fast(&s[0], vario);
-			//printf("%s",s);
-			// NMEA sentence valid ?? Otherwise print some error !!
-			if (result != 1)
-			{
-				printf("POV fast NMEA Result = %d\n",result);
-			}	
-		
-			// Send NMEA string via socket to XCSoar
-			if (send(sock, s, strlen(s), 0) < 0)
-				fprintf(stderr, "send failed\n");
-#endif
-
-			// save timestamp of last send
-			clock_gettime(CLOCK_REALTIME, &last_send);
-		}
-	}
-	return 0;
-}	
 		
 		/*
 		// get data from sensors
