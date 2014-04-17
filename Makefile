@@ -10,15 +10,6 @@ LIBS = -lrt -lm
 ODIR = obj
 BINDIR = /opt/bin/
 
-# Parameters to control program functions
-ifeq ($(NMEA_FLAVOR),PAFG)
-  CFLAGS += -DNMEA_PAFG
-  $(info Build with PAFG NMEA sentence)
-else
-  CFLAGS += -DNMEA_POV
-  $(info Build with POV NMEA sentence)
-endif
-
 #targets
 
 $(ODIR)/%.o: %.c
@@ -41,6 +32,9 @@ test: test.o obj/nmea.o
 	$(CC) $(LIBS) -g -o $@ $^
 
 sensord_fastsample: sensord_fastsample.o
+	$(CC) $(LIBS) -g -o $@ $^
+
+i2c_test: i2c_test.o ms5611.o
 	$(CC) $(LIBS) -g -o $@ $^
 	
 clean:
