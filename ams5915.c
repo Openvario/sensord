@@ -68,7 +68,7 @@ int ams5915_init(t_ams5915 *sensor)
 	sensor->pmax = 50;            // from datasheet
 		
 	sensor->sensp = (sensor->digoutpmax - sensor->digoutpmin)/(sensor->pmax - sensor->pmin); 
-	ddebug_print("AMS5915: sensp=%f\n", sensor->sensp);
+	ddebug_print("%s @ 0x%x: sensp=%f\n", __func__, sensor->address, sensor->sensp);
 	return(0);
 	
 }
@@ -89,12 +89,10 @@ int ams5915_measure(t_ams5915 *sensor)
 		return(1);
 	}
 	
-	ddebug_print("read from AMS5915: 0x%x 0x%x 0x%x 0x%x \n", buf[0], buf[1], buf[2], buf[3]);
-
 	sensor->digoutp = ((buf[0] & (0x3F)) << 8) + buf[1];
 	sensor->digoutT = (((buf[2] << 8) + (buf[3] & 0xE0)) >> 5);
-	ddebug_print("AMS5915: digoutp=0x%x %d\n", sensor->digoutp, sensor->digoutp);
-	ddebug_print("AMS5915: digoutT=0x%x %d\n", sensor->digoutT, sensor->digoutT);
+	ddebug_print("%s @ 0x%x: digoutp=0x%x %d\n", __func__, sensor->address, sensor->digoutp, sensor->digoutp);
+	ddebug_print("%s @ 0x%x: digoutT=0x%x %d\n", __func__, sensor->address,sensor->digoutT, sensor->digoutT);
 	
 	//save time of sample
 	clock_gettime( CLOCK_REALTIME, &(sensor->sample));
@@ -105,9 +103,6 @@ int ams5915_measure(t_ams5915 *sensor)
 
 int ams5915_calculate(t_ams5915 *sensor)
 {
-	
-	ddebug_print("calc...\n");
-			
 	// calculate differential pressure
 	sensor->p = (float) (((sensor->digoutp - sensor->digoutpmin)/sensor->sensp) + sensor->pmin);
 	
@@ -117,7 +112,7 @@ int ams5915_calculate(t_ams5915 *sensor)
 	// correct measured pressure
 	sensor->p = sensor->linearity * sensor->p + sensor->offset;
 	
-	debug_print("AMS5915 @ 0x%x: Pressure: %f Temp: %f\n", sensor->address, sensor->p, sensor->T);
+	debug_print("%s @ 0x%x: Pressure: %f Temp: %f\n", __func__, sensor->address, sensor->p, sensor->T);
 
 	return (0);
 }

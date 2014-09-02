@@ -113,11 +113,7 @@ int ms5611_init(t_ms5611 *sensor)
 int ms5611_start_temp(t_ms5611 *sensor)
 {
 	//variables
-	//struct timespec sample_time;
 	unsigned char buf[10]={0x00};
-	
-	//sample_time.tv_sec = 0;
-	//sample_time.tv_nsec = MS5611_CONVERSIONTIME;
 
 	// start conversion for D2
 	buf[0] = 0x58;										// This is the register we want to read from
@@ -172,9 +168,10 @@ int ms5611_read_temp(t_ms5611 *sensor)
 	sensor->dT = sensor->D2 - sensor->C5s;
 	sensor->temp = 2000 + ((sensor->dT * sensor->C6) / 8388608);
 			
-	// debug print		
-	ddebug_print("dT = %lld\n", sensor->dT);
-	ddebug_print("temp = %ld\n", sensor->temp);
+	// debug print
+	ddebug_print("%s @ 0x%x: D2 = %lud\n", __func__, sensor->address, sensor->D2);
+	ddebug_print("%s @ 0x%x: dT = %lld\n", __func__, sensor->address, sensor->dT);
+	ddebug_print("%s @ 0x%x: temp = %ld\n", __func__, sensor->address, sensor->temp);
 	
 	return(0);
 }
@@ -201,7 +198,6 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	
 	// put pressure reading together
 	sensor->D1 = buf[0] * 65536 + buf[1] * 256 + buf[2];
-	ddebug_print("D1 = %lu\n", sensor->D1);
 
 	// these calculations are copied from the data sheet
 	//OFF = C2 * 2**16 + (C4 * dT) / 2**7
@@ -216,10 +212,10 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	sensor->p = sensor->linearity * (float)(sensor->p_meas + sensor->offset);
 	
 	// some debugging output
-	ddebug_print("off: %lld\n", sensor->off);
-	ddebug_print("sens: %lld\n", sensor->sens);
-			
-	debug_print("MS5611 @ 0x%x: Pressure: %f\n", sensor->address, sensor->p);
+	ddebug_print("%s @ 0x%x: D1: %lu\n", __func__, sensor->address, sensor->D1);
+	ddebug_print("%s @ 0x%x: OFF: %lld\n", __func__, sensor->address, sensor->off);
+	ddebug_print("%s @ 0x%x: SENS: %lld\n", __func__, sensor->address, sensor->sens);			
+	debug_print("%s @ 0x%x: Pressure: %ld\n", __func__, sensor->address, sensor->p_meas);
 	
 	return(0);
 }
@@ -298,8 +294,6 @@ int ms5611_calculate(t_ms5611 *sensor)
 	//long d2;
 	long OFF2=0;
 	long SENS2=0;
-	
-	ddebug_print("calc...\n");
 				
 	//dT = D2 - C5 * 2**8
 	//TEMP = 2000 + dT * C6 / 2**23
