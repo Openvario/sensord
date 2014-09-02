@@ -246,13 +246,28 @@ void pressure_measurement_handler(void)
 				fprintf(fp_datalog, "%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p);
 			}
 			break;
+		case 3:
+			// start temp measurement
+			ms5611_start_temp(&static_sensor);
+			ms5611_start_temp(&tep_sensor);
+			break;
+		case 4:
+			// read temp values
+			ms5611_read_temp(&static_sensor);
+			ms5611_read_temp(&tep_sensor);
+			break;
 	}
 	
 	// take care for statemachine counter
 	if (meas_counter == 40)
-			meas_counter = 1;
-		else
-			meas_counter++;
+	{
+		meas_counter = 1;
+		ddebug_print("%s: start new cycle\n", __func__);
+	}
+	else
+	{
+		meas_counter++;
+	}
 }
 	
 int main (int argc, char **argv) {
@@ -392,7 +407,11 @@ int main (int argc, char **argv) {
 		ms5611_start_pressure(&static_sensor);
 		usleep(10000);
 		ms5611_read_pressure(&static_sensor);
-		
+	
+		ms5611_start_temp(&tep_sensor);
+		usleep(10000);
+		ms5611_read_temp(&tep_sensor);
+
 		// initialize variables
 		p_static = static_sensor.p;
 	}
