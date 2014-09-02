@@ -291,7 +291,7 @@ int Compose_Pressure_POV_fast(char *sentence, float te_vario)
 	}*/
 	
 	// compose NMEA String
-	length = sprintf(sentence, "$POV,E,%+05.1f", te_vario); 
+	length = sprintf(sentence, "$POV,E,%+05.2f", te_vario); 
 	
 	// Calculate NMEA checksum and add to string
 	sprintf(sentence + length, "*%02X\n", NMEA_checksum(sentence));
