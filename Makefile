@@ -1,8 +1,6 @@
 # Makefile for sensord
 #Some compiler stuff and flags
-CC = gcc
-CFLAGS = -g -Wall
-LDFLAGS =
+CFLAGS += -g -Wall
 EXECUTABLE = sensord
 _OBJ = ms5611.o ams5915.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o vario.o AirDensity.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
