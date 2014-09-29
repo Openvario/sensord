@@ -1,3 +1,4 @@
 obj/*
 doc/*
-sensordaemon
+sensord
+sensorcal
