@@ -1,9 +1,11 @@
 # Makefile for sensord
 #Some compiler stuff and flags
 CFLAGS += -g -Wall
-EXECUTABLE = sensord
+EXECUTABLE = sensord sensorcal
 _OBJ = ms5611.o ams5915.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o vario.o AirDensity.o
+_OBJ_CAL = 24c16.o ams5915.o sensorcal.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
+OBJ_CAL = $(patsubst %,$(ODIR)/%,$(_OBJ_CAL))
 LIBS = -lrt -lm
 ODIR = obj
 BINDIR = /opt/bin/
@@ -14,7 +16,7 @@ $(ODIR)/%.o: %.c
 	mkdir -p $(ODIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: sensord doc
+all: sensord sensorcal
 	
 doc: 
 	@echo Running doxygen to create documentation
@@ -23,7 +25,10 @@ doc:
 sensord: $(OBJ)
 	$(CC) $(LIBS) -g -o $@ $^
 	
-install: sensord
+sensorcal: $(OBJ_CAL)
+	$(CC) -g -o $@ $^
+
+install: sensord sensorcal
 	install -D sensord $(BINDIR)/$(EXECUTABLE)
 	
 test: test.o obj/nmea.o
