@@ -66,7 +66,7 @@ int calibrate_ams5915(t_eeprom_data* data)
 		offset += dynamic_sensor.p;
 	}
 		
-	data->zero_offset = offset/10;
+	data->zero_offset = -1*(offset/10);
 	
 	return(0);
 }
@@ -134,7 +134,7 @@ int main (int argc, char **argv) {
 				if( eeprom_read_data(&eeprom, &data) == 0)
 				{
 					calibrate_ams5915(&data);
-					printf("New Offset: %f\n",data.zero_offset);
+					printf("New Offset: %f\n",(data.zero_offset));
 					update_checksum(&data);
 					printf("Writing data to EEPROM ...\n");
 					result = eeprom_write(&eeprom, (char*)&data, 0x00, sizeof(data));
