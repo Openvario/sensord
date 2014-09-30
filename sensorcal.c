@@ -99,6 +99,11 @@ int main (int argc, char **argv) {
 	
 	// open eeprom object
 	result = eeprom_open(&eeprom, 0x50);
+	if (result != 0)
+	{
+		printf("No EEPROM found !!\n");
+		exit(1);
+	}
 		
 	// check commandline arguments
 	while ((c = getopt (argc, argv, "his:cd")) != -1)
@@ -126,15 +131,7 @@ int main (int argc, char **argv) {
 			case 'c':
 				// read actual EEPROM values
 				printf("Reading EEPROM values ...\n\n");
-				result = eeprom_read(&eeprom, (char*)&data, 0x00, sizeof(data));
-				if (!verify_checksum(&data))
-				{
-					printf("EEPROM content not valid !!\n");
-					printf("Please use -i to initialize EEPROM !!\n");
-					exit_code=2;
-					break;
-				}
-				else
+				if( eeprom_read_data(&eeprom, &data) == 0)
 				{
 					calibrate_ams5915(&data);
 					printf("New Offset: %f\n",data.zero_offset);
@@ -142,24 +139,30 @@ int main (int argc, char **argv) {
 					printf("Writing data to EEPROM ...\n");
 					result = eeprom_write(&eeprom, (char*)&data, 0x00, sizeof(data));
 				}
-				break;
-			case 'd':
-				// read actual EEPROM values
-				printf("Reading EEPROM values ...\n\n");
-				result = eeprom_read(&eeprom, (char*)&data, 0x00, sizeof(data));
-				if (!verify_checksum(&data))
+				else
 				{
 					printf("EEPROM content not valid !!\n");
 					printf("Please use -i to initialize EEPROM !!\n");
 					exit_code=2;
 					break;
-				}
-				else
+				}						
+				break;
+			case 'd':
+				// read actual EEPROM values
+				printf("Reading EEPROM values ...\n\n");
+				if( eeprom_read_data(&eeprom, &data) == 0)
 				{
 					printf("Actual EEPROM values:\n");
 					printf("---------------------\n");
 					printf("Serial: \t\t\t%s\n", data.serial);
 					printf("Differential pressure offset:\t%f\n",data.zero_offset);
+				}
+				else
+				{
+					printf("EEPROM content not valid !!\n");
+					printf("Please use -i to initialize EEPROM !!\n");
+					exit_code=2;
+					break;
 				}
 				printf("End ...\n");
 				exit(exit_code);
@@ -168,26 +171,27 @@ int main (int argc, char **argv) {
 			case 's':
 				if( strlen(optarg) == 6)
 				{
-					// read actual EEPROM values
-					result = eeprom_read(&eeprom, (char*)&data, 0x00, sizeof(data));
-					if (!verify_checksum(&data))
+					// read actual EEPROM values	
+					if( eeprom_read_data(&eeprom, &data) == 0)
+					{
+						for(i=0; i<7;i++)
+						{
+							data.serial[i]=*optarg;
+							optarg++;
+						}
+						data.serial[7]='\n';
+						printf("New Serial number: %s\n",data.serial);
+						update_checksum(&data);
+						printf("Writing data to EEPROM ...\n");
+						result = eeprom_write(&eeprom, (char*)&data, 0x00, sizeof(data));
+					}
+					else
 					{
 						printf("EEPROM content not valid !!\n");
 						printf("Please use -i to initialize EEPROM !!\n");
 						exit_code=2;
 						break;
 					}
-					
-					for(i=0; i<7;i++)
-					{
-						data.serial[i]=*optarg;
-						optarg++;
-					}
-					data.serial[7]='\n';
-					printf("New Serial number: %s\n",data.serial);
-					update_checksum(&data);
-					printf("Writing data to EEPROM ...\n");
-					result = eeprom_write(&eeprom, (char*)&data, 0x00, sizeof(data));
 				}
 				else
 				{
@@ -206,11 +210,5 @@ int main (int argc, char **argv) {
 		
 	printf("End ...\n");
 	return(exit_code);
-}
-	
-int write_data_to_eeprom(t_24c16 eeprom, t_eeprom_data data)
-{
-
-	return 0;
 }
 	
