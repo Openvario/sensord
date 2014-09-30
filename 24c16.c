@@ -29,6 +29,26 @@ int update_checksum(t_eeprom_data* data)
 	return (0);
 }
 
+int eeprom_read_data(t_24c16 *eeprom, t_eeprom_data *data)
+{
+	int result;
+
+	// read eeprom data to struct
+	result = eeprom_read(eeprom, (char*)data, 0x00, sizeof(*data));
+	
+	// verify checksum
+	if (!verify_checksum(data))
+	{
+		printf("EEPROM content not valid !!\n");
+		printf("Please use -i to initialize EEPROM !!\n");
+		return 2;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
 char verify_checksum(t_eeprom_data* data)
 {
 	char* p_data;
@@ -58,26 +78,47 @@ int eeprom_open(t_24c16 *eeprom, unsigned char i2c_address)
 {
 	// local variables
 	int fd;
+	char s;
+	int ret_code = 0;
+	char offset = 0x00;
 	
 	// try to open I2C Bus
 	fd = open("/dev/i2c-1", O_RDWR);
 	
 	if (fd < 0) {
 		fprintf(stderr, "Error opening file: %s\n", strerror(errno));
-		return 1;
+		ret_code = 1;
 	}
 
 	if (ioctl(fd, I2C_SLAVE, i2c_address) < 0) {
 		fprintf(stderr, "ioctl error: %s\n", strerror(errno));
-		return 1;
+		ret_code = 1;
 	}
-	
-	printf("Opened 24C16 on 0x%x\n", i2c_address);
 	
 	// assign file handle to sensor object
 	eeprom->fd = fd;
 	eeprom->address = i2c_address;
-	return (0);
+		
+	//write address offset to eeprom
+	if ((write(eeprom->fd, (void*)&offset, 1)) != 1) {				// Send register we want to read from	
+		//printf("Error writing to i2c slave (%s)\n", __func__);
+		ret_code = 1;
+	}
+	
+	if (read(eeprom->fd, &s, 1) != 1) {		// Read back data into buf[]
+		ret_code = 1;
+	}
+	
+	if (ret_code == 0)
+	{
+		printf("Opened 24C16 on 0x%x\n", i2c_address);
+
+	}
+	else
+	{
+		printf("Opened 24C16 on 0x%x failed !!!\n", i2c_address);
+	}
+	return (ret_code);
 }
 
 char eeprom_write(t_24c16 *eeprom, char *s, unsigned char offset, unsigned char count)

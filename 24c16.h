@@ -22,5 +22,7 @@ char eeprom_write(t_24c16 *, char *, unsigned char, unsigned char);
 char eeprom_read(t_24c16 *, char *, char, char);
 int update_checksum(t_eeprom_data*);
 char verify_checksum(t_eeprom_data*);
+int eeprom_read_data(t_24c16 *, t_eeprom_data *);
+
 
 
