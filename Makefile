@@ -2,7 +2,7 @@
 #Some compiler stuff and flags
 CFLAGS += -g -Wall
 EXECUTABLE = sensord sensorcal
-_OBJ = ms5611.o ams5915.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o vario.o AirDensity.o
+_OBJ = ms5611.o ams5915.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o vario.o AirDensity.o 24c16.o
 _OBJ_CAL = 24c16.o ams5915.o sensorcal.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 OBJ_CAL = $(patsubst %,$(ODIR)/%,$(_OBJ_CAL))

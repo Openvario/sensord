@@ -46,6 +46,7 @@
 #include "configfile_parser.h"
 #include "vario.h"
 #include "AirDensity.h"
+#include "24c16.h"
 
 #define I2C_ADDR 0x76
 #define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
@@ -238,6 +239,12 @@ void pressure_measurement_handler(void)
 			
 			// of dynamic pressure
 			p_dynamic = (3*p_dynamic + dynamic_sensor.p) / 4;
+			printf("Pdyn: %f\n",p_dynamic*100);
+			// mask speeds < 10km/h
+			if (p_dynamic < 0.04)
+			{
+				p_dynamic = 0.0;
+			}	
 			
 			// write pressure to file if option is set
 			if (io_mode.sensordata_to_file == TRUE)
@@ -274,6 +281,10 @@ int main (int argc, char **argv) {
 	
 	// local variables
 	int i=0;
+	int result;
+	
+	t_24c16 eeprom;
+	t_eeprom_data data;
 	
 	// for daemonizing
 	pid_t pid;
@@ -305,7 +316,6 @@ int main (int argc, char **argv) {
 	// get config file options
 	if (fp_config != NULL)
 		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor);
-	
 	
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
@@ -364,6 +374,26 @@ int main (int argc, char **argv) {
 		stderr = fp_console;
 	}
 		
+	// get config from EEPROM
+	// open eeprom object
+	result = eeprom_open(&eeprom, 0x50);
+	if (result != 0)
+	{
+		printf("No EEPROM found !!\n");
+	}
+	else
+	{
+		if( eeprom_read_data(&eeprom, &data) == 0)
+		{
+			fprintf(fp_console,"Using EEPROM calibration values ...\n");
+			dynamic_sensor.offset = data.zero_offset;
+		}
+		else
+		{
+			fprintf(stderr, "EEPROM Checksum wrong !!\n");
+		}
+	}
+	
 	if (io_mode.sensordata_from_file != TRUE)
 	{
 		// we need hardware sensors for running !!
