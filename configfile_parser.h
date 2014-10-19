@@ -17,5 +17,9 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.	
 */
 
+typedef struct {
+	char output_POV_E;
+	char output_POV_P_Q;
+} t_config;
 
-int cfgfile_parser(FILE *, t_ms5611 *, t_ms5611 *, t_ams5915 *);
+int cfgfile_parser(FILE *, t_ms5611 *, t_ms5611 *, t_ams5915 *, t_config *);

@@ -65,6 +65,9 @@ t_ms5611 static_sensor;
 t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
 	
+// configuration object
+t_config config;
+
 // Filter objects
 t_kalmanfilter1d vkf;
 	
@@ -142,32 +145,38 @@ void NMEA_message_handler(int sock)
 			// Compute Vario
 			vario = ComputeVario(vkf.x_abs_, vkf.x_vel_);
 			
-			// Compose POV slow NMEA sentences
-			result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
-			//printf("%s",s);
-			// NMEA sentence valid ?? Otherwise print some error !!
-			if (result != 1)
+			if (config.output_POV_P_Q == 1)
 			{
-				printf("POV slow NMEA Result = %d\n",result);
-			}	
-		
-			// Send NMEA string via socket to XCSoar
-			if (send(sock, s, strlen(s), 0) < 0)
-				fprintf(stderr, "send failed\n");
+				// Compose POV slow NMEA sentences
+				result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
+				//printf("%s",s);
+				// NMEA sentence valid ?? Otherwise print some error !!
+				if (result != 1)
+				{
+					printf("POV slow NMEA Result = %d\n",result);
+				}	
 			
-			// Compose POV slow NMEA sentences
-			result = Compose_Pressure_POV_fast(&s[0], vario);
-			//printf("%s",s);
-			// NMEA sentence valid ?? Otherwise print some error !!
-			if (result != 1)
+				// Send NMEA string via socket to XCSoar
+				if (send(sock, s, strlen(s), 0) < 0)
+					fprintf(stderr, "send failed\n");
+			}
+			
+			if (config.output_POV_E == 1)
 			{
-				printf("POV fast NMEA Result = %d\n",result);
-			}	
-		
-			// Send NMEA string via socket to XCSoar
-			if (send(sock, s, strlen(s), 0) < 0)
-				fprintf(stderr, "send failed\n");
-				
+				// Compose POV slow NMEA sentences
+				result = Compose_Pressure_POV_fast(&s[0], vario);
+				//printf("%s",s);
+				// NMEA sentence valid ?? Otherwise print some error !!
+				if (result != 1)
+				{
+					printf("POV fast NMEA Result = %d\n",result);
+				}	
+			
+				// Send NMEA string via socket to XCSoar
+				if (send(sock, s, strlen(s), 0) < 0)
+					fprintf(stderr, "send failed\n");
+			}
+			
 			break;
 		default:
 			break;
@@ -239,7 +248,7 @@ void pressure_measurement_handler(void)
 			
 			// of dynamic pressure
 			p_dynamic = (3*p_dynamic + dynamic_sensor.p) / 4;
-			printf("Pdyn: %f\n",p_dynamic*100);
+			//printf("Pdyn: %f\n",p_dynamic*100);
 			// mask speeds < 10km/h
 			if (p_dynamic < 0.04)
 			{
@@ -310,12 +319,15 @@ int main (int argc, char **argv) {
 	tep_sensor.offset = 0.0;
 	tep_sensor.linearity = 1.0;
 	
+	config.output_POV_E = 0;
+	config.output_POV_P_Q = 0;
+	
 	//parse command line arguments
 	cmdline_parser(argc, argv, &io_mode);
 	
 	// get config file options
 	if (fp_config != NULL)
-		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor);
+		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &config);
 	
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)

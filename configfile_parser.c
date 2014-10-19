@@ -25,15 +25,16 @@
 
 #include "ms5611.h"
 #include "ams5915.h"
+#include "configfile_parser.h"
 
 extern int g_debug;
 extern FILE *fp_console;
 
-int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_ams5915 *dynamic_sensor)
+int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_ams5915 *dynamic_sensor, t_config *config)
 {
 	char line[70];
 	char tmp[20];
-	
+		
 	// is config file used ??
 	if (fp)
 	{
@@ -42,12 +43,28 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 		{
 			// get line from config file
 			fgets(line, 70, fp);
+			//printf("getting line: '%s'\n", line);
 			
 			// check if line is comment
-			if(!(line[0] == '#') || (line[0] == '\n'))
+			if((!(line[0] == '#')) && (!(line[0] == '\n')))
 			{
+			
 				// get first config tag
 				sscanf(line, "%s", tmp);
+				
+				// check for output of POV_E sentence
+				if (strcmp(tmp,"output_POV_E") == 0)
+				{	
+					config->output_POV_E = 1;
+					//printf("OUTput POV_E enabled !! \n");
+				}
+				
+				// check for output of POV_E sentence
+				if (strcmp(tmp,"output_POV_P_Q") == 0)
+				{	
+					config->output_POV_P_Q = 1;
+					//printf("OUTput POV_P_Q enabled !! \n");
+				}
 				
 				// check for static_sensor
 				if (strcmp(tmp,"static_sensor") == 0)
