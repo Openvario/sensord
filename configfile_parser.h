@@ -20,6 +20,7 @@
 typedef struct {
 	char output_POV_E;
 	char output_POV_P_Q;
+	float vario_x_accel;
 } t_config;
 
 int cfgfile_parser(FILE *, t_ms5611 *, t_ms5611 *, t_ams5915 *, t_config *);

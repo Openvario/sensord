@@ -406,6 +406,9 @@ int main (int argc, char **argv) {
 		}
 	}
 	
+	// print runtime config
+	print_runtime_config();
+	
 	if (io_mode.sensordata_from_file != TRUE)
 	{
 		// we need hardware sensors for running !!
@@ -464,7 +467,7 @@ int main (int argc, char **argv) {
 	
 	// initialize kalman filter
 	KalmanFilter1d_reset(&vkf);
-	vkf.var_x_accel_ = 0.3;
+	vkf.var_x_accel_ = config.vario_x_accel;
 	
 	for(i=0; i < 1000; i++)
 		KalmanFiler1d_update(&vkf, p_static, 0.25, 1);
@@ -501,6 +504,27 @@ int main (int argc, char **argv) {
 	
 	return 0;
 }	
+
+void print_runtime_config(void)
+{
+	// print actual used config
+	fprintf(fp_console,"=========================================================================\n");
+	fprintf(fp_console,"Runtime Configuration:\n");
+	fprintf(fp_console,"----------------------\n");
+	fprintf(fp_console,"Vario:\n");
+	fprintf(fp_console,"  Kalman Accel:\t%f\n",config.vario_x_accel);
+	fprintf(fp_console,"Sensor TEK:\n");
+	fprintf(fp_console,"  Offset: \t%f\n",tep_sensor.offset);
+	fprintf(fp_console,"  Linearity: \t%f\n", tep_sensor.linearity);
+	fprintf(fp_console,"Sensor STATIC:\n");
+	fprintf(fp_console,"  Offset: \t%f\n",static_sensor.offset);
+	fprintf(fp_console,"  Linearity: \t%f\n", static_sensor.linearity);
+	fprintf(fp_console,"Sensor TOTAL:\n");
+	fprintf(fp_console,"  Offset: \t%f\n",dynamic_sensor.offset);
+	fprintf(fp_console,"  Linearity: \t%f\n", dynamic_sensor.linearity);
+	fprintf(fp_console,"=========================================================================\n");
+	
+}
 
 /*	while (1)
 	{

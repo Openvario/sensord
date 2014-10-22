@@ -22,3 +22,5 @@ typedef struct
 	char sensordata_to_file;
 	char sensordata_from_file;
 } t_io_mode;
+
+void print_runtime_config(void);

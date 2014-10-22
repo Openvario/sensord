@@ -86,6 +86,13 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					// get config data for dynamic sensor
 					sscanf(line, "%s %f %f", tmp, &dynamic_sensor->offset, &dynamic_sensor->linearity);
 				}
+				
+				// check for vario config
+				if (strcmp(tmp,"vario_config") == 0)
+				{
+					// get config data for dynamic sensor
+					sscanf(line, "%s %f", tmp, &config->vario_x_accel);
+				}
 			}
 	
 			
