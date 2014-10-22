@@ -214,9 +214,12 @@ void pressure_measurement_handler(void)
 		case 29:
 		case 33:
 		case 37:
-			// start pressure measurement
-			ms5611_start_pressure(&static_sensor);
-			ms5611_start_pressure(&tep_sensor);
+			if (io_mode.sensordata_from_file != TRUE)
+			{
+				// start pressure measurement
+				ms5611_start_pressure(&static_sensor);
+				ms5611_start_pressure(&tep_sensor);
+			}
 			break;
 		
 		case 2:
@@ -229,13 +232,25 @@ void pressure_measurement_handler(void)
 		case 30:
 		case 34:
 		case 38:
-			// read pressure values
-			ms5611_read_pressure(&static_sensor);
-			ms5611_read_pressure(&tep_sensor);
-						
-			// read AMS5915
-			ams5915_measure(&dynamic_sensor);
-			ams5915_calculate(&dynamic_sensor);
+			if (io_mode.sensordata_from_file != TRUE)
+			{
+				// read pressure values
+				ms5611_read_pressure(&static_sensor);
+				ms5611_read_pressure(&tep_sensor);
+							
+				// read AMS5915
+				ams5915_measure(&dynamic_sensor);
+				ams5915_calculate(&dynamic_sensor);
+			}
+			else
+			{
+				if (fscanf(fp_sensordata, "%f,%f,%f", &tep_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF)
+				{
+					printf("End of File reached\n");
+					printf("Exiting ...\n");
+					exit(EXIT_SUCCESS);
+				}
+			}
 			
 			//
 			// filtering
@@ -259,7 +274,7 @@ void pressure_measurement_handler(void)
 			if (io_mode.sensordata_to_file == TRUE)
 			{
 				//fprintf(fp_datalog, "%f,%f\n",  tep_sensor.p, static_sensor.p);
-				fprintf(fp_datalog, "%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p);
+				fprintf(fp_sensordata, "%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p);
 			}
 			break;
 		case 3:
