@@ -274,7 +274,7 @@ void pressure_measurement_handler(void)
 			if (io_mode.sensordata_to_file == TRUE)
 			{
 				//fprintf(fp_datalog, "%f,%f\n",  tep_sensor.p, static_sensor.p);
-				fprintf(fp_sensordata, "%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p);
+				fprintf(fp_datalog, "%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p);
 			}
 			break;
 		case 3:
