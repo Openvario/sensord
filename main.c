@@ -85,6 +85,8 @@ FILE *fp_sensordata=NULL;
 FILE *fp_datalog=NULL;
 FILE *fp_config=NULL;
 
+//FILE *fp_rawlog=NULL;
+
 enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
 
 //typedef enum { measure_only, record, replay} t_measurement_mode;
@@ -114,7 +116,8 @@ void sigintHandler(int sig_num){
 	//close fp_config if used
 	if (fp_config != NULL)
 		fclose(fp_config);
-		
+	
+	//fclose(fp_rawlog);
 	printf("Exiting ...\n");
 	fclose(fp_console);
 	
@@ -176,7 +179,6 @@ void NMEA_message_handler(int sock)
 				if (send(sock, s, strlen(s), 0) < 0)
 					fprintf(stderr, "send failed\n");
 			}
-			
 			break;
 		default:
 			break;
@@ -259,7 +261,7 @@ void pressure_measurement_handler(void)
 			p_static = (3*p_static + static_sensor.p) / 4;
 			
 			// of tep pressure
-			KalmanFiler1d_update(&vkf, tep_sensor.p, 0.25, 0.05);
+			KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, 0.05);
 			
 			// of dynamic pressure
 			p_dynamic = (3*p_dynamic + dynamic_sensor.p) / 4;
@@ -273,9 +275,12 @@ void pressure_measurement_handler(void)
 			// write pressure to file if option is set
 			if (io_mode.sensordata_to_file == TRUE)
 			{
-				//fprintf(fp_datalog, "%f,%f\n",  tep_sensor.p, static_sensor.p);
-				fprintf(fp_datalog, "%f,%f,%f\n",  tep_sensor.p, static_sensor.p, dynamic_sensor.p);
+				fprintf(fp_datalog, "%f,%f,%f\n",  tep_sensor.p/100, static_sensor.p/100, dynamic_sensor.p);
 			}
+			
+			// datalog
+			//fprintf(fp_rawlog,"%f,%f,%f\n",tep_sensor.p/100, vkf.x_abs_, vkf.x_vel_);
+			
 			break;
 		case 3:
 			// start temp measurement
@@ -337,6 +342,9 @@ int main (int argc, char **argv) {
 	config.output_POV_E = 0;
 	config.output_POV_P_Q = 0;
 	
+	//open file for raw output
+	//fp_rawlog = fopen("raw.log","w");
+		
 	//parse command line arguments
 	cmdline_parser(argc, argv, &io_mode);
 	
@@ -485,7 +493,7 @@ int main (int argc, char **argv) {
 	vkf.var_x_accel_ = config.vario_x_accel;
 	
 	for(i=0; i < 1000; i++)
-		KalmanFiler1d_update(&vkf, p_static, 0.25, 1);
+		KalmanFiler1d_update(&vkf, p_static/100, 0.25, 1);
 		
 	// Open Socket for TCP/IP communication
 	sock = socket(AF_INET, SOCK_STREAM, 0);
