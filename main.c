@@ -144,6 +144,9 @@ void NMEA_message_handler(int sock)
 	
 	switch (nmea_counter)
 	{
+		case 10:
+		case 20:
+		case 30:
 		case 40:
 			// Compute Vario
 			vario = ComputeVario(vkf.x_abs_, vkf.x_vel_);
