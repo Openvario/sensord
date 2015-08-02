@@ -134,10 +134,11 @@ void sigintHandler(int sig_num){
 * @date 17.04.2014 born
 *
 */ 
-void NMEA_message_handler(int sock)
+int NMEA_message_handler(int sock)
 {
 	// some local variables
 	float vario;
+	int sock_err;
 	static int nmea_counter = 1;
 	int result;
 	char s[256];
@@ -159,7 +160,7 @@ void NMEA_message_handler(int sock)
 			{
 				// Compose POV slow NMEA sentences
 				result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
-				//printf("%s",s);
+				
 				// NMEA sentence valid ?? Otherwise print some error !!
 				if (result != 1)
 				{
@@ -167,24 +168,30 @@ void NMEA_message_handler(int sock)
 				}	
 			
 				// Send NMEA string via socket to XCSoar
-				if (send(sock, s, strlen(s), 0) < 0)
+				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+				{	
 					fprintf(stderr, "send failed\n");
+					break;
+				}
 			}
 			
 			if (config.output_POV_E == 1)
 			{
 				// Compose POV slow NMEA sentences
 				result = Compose_Pressure_POV_fast(&s[0], vario);
-				//printf("%s",s);
+				
 				// NMEA sentence valid ?? Otherwise print some error !!
 				if (result != 1)
 				{
 					printf("POV fast NMEA Result = %d\n",result);
 				}	
-			
+				
 				// Send NMEA string via socket to XCSoar
-				if (send(sock, s, strlen(s), 0) < 0)
+				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+				{	
 					fprintf(stderr, "send failed\n");
+					break;
+				}
 			}
 			break;
 		default:
@@ -196,6 +203,8 @@ void NMEA_message_handler(int sock)
 			nmea_counter = 1;
 		else
 			nmea_counter++;
+		
+	return(sock_err);
 		
 }
 
@@ -318,6 +327,7 @@ int main (int argc, char **argv) {
 	// local variables
 	int i=0;
 	int result;
+	int sock_err = 0;
 	
 	t_24c16 eeprom;
 	t_eeprom_data data;
@@ -372,6 +382,8 @@ int main (int argc, char **argv) {
 		// open console again, but as file_pointer
 		fp_console = stdout;
 		stderr = stdout;
+		setbuf(fp_console, NULL);
+		setbuf(stderr, NULL);
 		
 		// close the standard file descriptors
 		close(STDIN_FILENO);
@@ -414,8 +426,12 @@ int main (int argc, char **argv) {
 		//open file for log output
 		fp_console = fopen("sensord.log","w+");
 		stderr = fp_console;
+		setbuf(fp_console, NULL);
 	}
 		
+	// ignore SIGPIPE
+	signal(SIGPIPE, SIG_IGN);
+	
 	// get config from EEPROM
 	// open eeprom object
 	result = eeprom_open(&eeprom, 0x50);
@@ -501,37 +517,47 @@ int main (int argc, char **argv) {
 	
 	for(i=0; i < 1000; i++)
 		KalmanFiler1d_update(&vkf, p_static/100, 0.25, 1);
-		
-	// Open Socket for TCP/IP communication
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock == -1)
-		fprintf(stderr, "could not create socket\n");
-  
-	server.sin_addr.s_addr = inet_addr("127.0.0.1");
-	server.sin_family = AF_INET;
-	server.sin_port = htons(4353);
-	
-	// try to connect to XCSoar
-	while (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
-		fprintf(stderr, "failed to connect, trying again\n");
-		fflush(stdout);
-		sleep(1);
-	}
-	
-	// main data acquisition loop
+			
 	while(1)
-	{	int result;
-	
-		result = usleep(12500);
-		if (result != 0)
-		{
-			printf("usleep error\n");
-			usleep(12500);
+	{
+		// reset sock_err variables
+		sock_err = 0;
+		
+		// Open Socket for TCP/IP communication
+		sock = socket(AF_INET, SOCK_STREAM, 0);
+		if (sock == -1)
+			fprintf(stderr, "could not create socket\n");
+  
+		server.sin_addr.s_addr = inet_addr("127.0.0.1");
+		server.sin_family = AF_INET;
+		server.sin_port = htons(4353);
+		
+		// try to connect to XCSoar
+		while (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
+			fprintf(stderr, "failed to connect, trying again\n");
+			fflush(stdout);
+			sleep(1);
 		}
-		pressure_measurement_handler();
-		NMEA_message_handler(sock);
+				
+		// socket connected
+		// main data acquisition loop
+		while(sock_err >= 0)
+		{	int result;
+		
+			result = usleep(12500);
+			if (result != 0)
+			{
+				printf("usleep error\n");
+				usleep(12500);
+			}
+			pressure_measurement_handler();
+			sock_err = NMEA_message_handler(sock);
+		
+		} // while(1)
+		
+		// connection dropped
+		close(sock);
 	}
-	
 	return 0;
 }	
 
