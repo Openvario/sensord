@@ -91,6 +91,9 @@ int main (int argc, char **argv) {
     "  -i              initialize EEPROM. All values will be cleared !!!\n"\
 	"\n";
 	
+	// disable buffering 
+	setbuf(stdout, NULL);
+	
 	// print banner
 	printf("sensorcal V%c.%c RELEASE %c build: %s %s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_RELEASE,  __DATE__, __TIME__);
 	printf("sensorcal Copyright (C) 2014  see AUTHORS on www.openvario.org\n");
