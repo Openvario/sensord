@@ -109,7 +109,7 @@ int main (int argc, char **argv) {
 	}
 		
 	// check commandline arguments
-	while ((c = getopt (argc, argv, "his:cd")) != -1)
+	while ((c = getopt (argc, argv, "his:cde")) != -1)
 	{
 		switch (c) {
 			case 'h':
@@ -149,6 +149,18 @@ int main (int argc, char **argv) {
 					exit_code=2;
 					break;
 				}						
+				break;
+			case 'e':
+				// delete complete EEPROM
+				printf("Delete whole EEPROM ...\n\n");
+				for (i=0; i< sizeof(data); i++)
+				{
+						result = eeprom_write(&eeprom, &zero[0], 0x00, 1);
+				}
+				printf("EEPROM cleared !!\n");
+				exit_code=3;
+				printf("End ...\n");
+				exit(exit_code);
 				break;
 			case 'd':
 				// read actual EEPROM values
