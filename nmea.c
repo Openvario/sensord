@@ -66,15 +66,15 @@ int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynam
 	// check static_pressure input value for validity
 	if ((static_pressure < 0) || (static_pressure > 2000))
 	{
-		static_pressure = 999;
+		static_pressure = 9999;
 		success = 10;
 	}
 	
 	// check dynamic_pressure input value for validity
 	/// @todo add useful range for dynamic_pressure vales !!
-	if ((dynamic_pressure < -999.0) || (dynamic_pressure > 9999.0))
+	if ((dynamic_pressure < -999.0) || (dynamic_pressure > 9998.0))
 	{
-		dynamic_pressure = 0.0;
+		dynamic_pressure = 9999;
 		success = 20;
 	}
 		
