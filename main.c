@@ -177,8 +177,13 @@ int NMEA_message_handler(int sock)
 			
 			if (config.output_POV_E == 1)
 			{
+				if (tep_sensor.valid != 1)
+				{
+					vario = 99;
+				}
 				// Compose POV slow NMEA sentences
 				result = Compose_Pressure_POV_fast(&s[0], vario);
+				printf("%s", s);
 				
 				// NMEA sentence valid ?? Otherwise print some error !!
 				if (result != 1)
@@ -276,8 +281,17 @@ void pressure_measurement_handler(void)
 			// of static pressure
 			p_static = (3*p_static + static_sensor.p) / 4;
 			
-			// of tep pressure
-			KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, 0.05);
+			// check tep_pressure input value for validity
+			if ((tep_sensor.p/100 < 100) || (tep_sensor.p/100 > 1200))
+			{
+				// tep pressure out of range
+				tep_sensor.valid = 0;
+			}
+			else
+			{
+				// of tep pressure
+				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, 0.05);
+			}
 			
 			// of dynamic pressure
 			p_dynamic = (3*p_dynamic + dynamic_sensor.p) / 4;
@@ -286,8 +300,8 @@ void pressure_measurement_handler(void)
 			if (p_dynamic < 0.04)
 			{
 				p_dynamic = 0.0;
-			}	
-			
+			}
+				
 			// write pressure to file if option is set
 			if (io_mode.sensordata_to_file == TRUE)
 			{
@@ -468,6 +482,7 @@ int main (int argc, char **argv) {
 		
 		//initialize static pressure sensor
 		ms5611_init(&static_sensor);
+		static_sensor.valid = 1;
 				
 		// open sensor for velocity pressure
 		/// @todo remove hardcoded i2c address for velocity pressure
@@ -479,7 +494,8 @@ int main (int argc, char **argv) {
 		
 		//initialize tep pressure sensor
 		ms5611_init(&tep_sensor);
-				
+		tep_sensor.valid = 1;
+		
 		// open sensor for differential pressure
 		/// @todo remove hardcoded i2c address for differential pressure
 		if (ams5915_open(&dynamic_sensor, 0x28) != 0)
@@ -490,6 +506,7 @@ int main (int argc, char **argv) {
 		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
+		dynamic_sensor.valid = 1;
 		
 		// poll sensors for offset compensation
 		ms5611_start_temp(&static_sensor);
