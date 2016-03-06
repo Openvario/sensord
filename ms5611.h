@@ -41,6 +41,7 @@ typedef struct {
 	float p;
 	float linearity;
 	float offset;
+	int valid;
 	struct timespec sample;
 	struct timespec last_sample;
 } t_ms5611;

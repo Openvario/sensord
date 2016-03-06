@@ -77,7 +77,7 @@ int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynam
 		dynamic_pressure = 9999;
 		success = 20;
 	}
-		
+
 	// compose NMEA String
 	length = sprintf(sentence, "$POV,P,%+07.2f,Q,%+05.2f", static_pressure, (dynamic_pressure)); 
 	
@@ -119,11 +119,11 @@ int Compose_Pressure_POV_fast(char *sentence, float te_vario)
 	int success = 1;
 
 	// check te_vario input value for validity
-	/*if ((te_vario < -10) || (te_vario > 10))
+	if ((te_vario < -50) || (te_vario > 50))
 	{
 		te_vario = 99;
 		success = 10;
-	}*/
+	}
 	
 	// compose NMEA String
 	length = sprintf(sentence, "$POV,E,%+05.2f", te_vario); 
