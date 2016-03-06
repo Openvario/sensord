@@ -183,6 +183,7 @@ int NMEA_message_handler(int sock)
 				}
 				// Compose POV slow NMEA sentences
 				result = Compose_Pressure_POV_fast(&s[0], vario);
+				printf("%s", s);
 				
 				// NMEA sentence valid ?? Otherwise print some error !!
 				if (result != 1)
