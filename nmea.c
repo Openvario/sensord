@@ -137,6 +137,53 @@ int Compose_Pressure_POV_fast(char *sentence, float te_vario)
 }
 
 /**
+* @brief Implements the $POV NMEA Sentence for voltage data
+* @param sentence char pointer for created string
+* @param Battery Voltage
+* @return result
+* 
+* Implementation of the properitary NMEA sentence for AKF Glidecomputer
+* \n
+*
+*     $POV,V,Bat_voltage*CRC
+*       |  |      |       |
+*       1  2      3       4
+*
+*     1: $P            		Properitary NMEA Sentence
+*        OV         		Manufacturer Code: OpenVario
+*
+*     2: V               	Code for Battery Voltage in V
+*     
+*     3: Battery Voltage           Format: 12.02
+*
+* @date 13.03.2016 born
+*
+*/ 
+
+int Compose_Voltage_POV(char *sentence, float voltage)
+{
+	int length;
+	int success = 1;
+
+	// check voltage input value for validity
+	if ((voltage < 2.) || (voltage > 20.))
+	{
+		voltage = 0.;
+		success = 10;
+	}
+	
+	// compose NMEA String
+	length = sprintf(sentence, "$POV,V,%+05.2f", voltage); 
+	
+	// Calculate NMEA checksum and add to string
+	sprintf(sentence + length, "*%02X\n", NMEA_checksum(sentence));
+	
+	//print sentence for debug
+	debug_print("NMEA sentence: %s\n", sentence);
+	return (success);
+}
+
+/**
 * @brief Implements the NMEA Checksum
 * @param char* NMEA string
 * @return int Calculated Checksum for string
