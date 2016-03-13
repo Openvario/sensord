@@ -43,6 +43,7 @@
 
 #include "ms5611.h"
 #include "ams5915.h"
+#include "ads1110.h"
 #include "configfile_parser.h"
 #include "vario.h"
 #include "AirDensity.h"
@@ -64,6 +65,7 @@ int g_log=0;
 t_ms5611 static_sensor;
 t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
+t_ads1110 voltage_sensor;
 	
 // configuration object
 t_config config;
@@ -198,6 +200,26 @@ int NMEA_message_handler(int sock)
 					break;
 				}
 			}
+			
+			if (config.output_POV_V == 1 && voltage_sensor.present)
+			{
+
+				// Compose POV slow NMEA sentences
+				result = Compose_Voltage_POV(&s[0], voltage_sensor.voltage_converted);
+				
+				// NMEA sentence valid ?? Otherwise print some error !!
+				if (result != 1)
+				{
+					printf("POV voltage NMEA Result = %d\n",result);
+				}	
+				
+				// Send NMEA string via socket to XCSoar
+				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+				{	
+					fprintf(stderr, "send failed\n");
+					break;
+				}
+			}
 			break;
 		default:
 			break;
@@ -264,6 +286,13 @@ void pressure_measurement_handler(void)
 				// read AMS5915
 				ams5915_measure(&dynamic_sensor);
 				ams5915_calculate(&dynamic_sensor);
+				
+				// read ADS1110
+				if(voltage_sensor.present)
+				{
+					ads1110_measure(&voltage_sensor);
+					ads1110_calculate(&voltage_sensor);
+				}
 			}
 			else
 			{
@@ -381,7 +410,7 @@ int main (int argc, char **argv) {
 	
 	// get config file options
 	if (fp_config != NULL)
-		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &config);
+		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &config);
 	
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
@@ -504,9 +533,21 @@ int main (int argc, char **argv) {
 			return 1;
 		}
 		
+		// open sensor for battery voltage
+		/// @todo remove hardcoded i2c address for voltage sensor
+		if (ads1110_open(&voltage_sensor, 0x48) != 0)
+		{
+			fprintf(stderr, "Open sensor failed !!\n");
+			return 1;
+		}
+		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
 		dynamic_sensor.valid = 1;
+		
+		//initialize voltage sensor
+		if(voltage_sensor.present)
+			ads1110_init(&voltage_sensor);
 		
 		// poll sensors for offset compensation
 		ms5611_start_temp(&static_sensor);

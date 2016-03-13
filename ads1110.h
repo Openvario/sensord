@@ -17,12 +17,18 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.	
 */
 
-#ifndef NMEA_H
-#define NMEA_H 
+// define struct for AMS5915 sensor
+typedef struct {
+	float voltage_factor;
+	int voltage_raw;
+	float voltage_converted;
+	int fd;
+	unsigned char address;
+	unsigned char present;
+} t_ads1110;
 
-unsigned char NMEA_checksum(char *);
-int Compose_Pressure_POV_slow(char *, float, float);
-int Compose_Pressure_POV_fast(char *, float);
-int Compose_Voltage_POV(char *sentence, float voltage);
-
-#endif
+// prototypes
+int ads1110_init(t_ads1110 *);
+int ads1110_measure(t_ads1110 *);
+int ads1110_calculate(t_ads1110 *);
+int ads1110_open(t_ads1110 *, unsigned char);
