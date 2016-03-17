@@ -37,6 +37,7 @@ int ads1110_open(t_ads1110 *sensor, unsigned char i2c_address)
 {
 	// local variables
 	int fd;
+	unsigned char buf[10]={0x00};
 	
 	// try to open I2C Bus
 	fd = open("/dev/i2c-1", O_RDWR);
@@ -47,9 +48,17 @@ int ads1110_open(t_ads1110 *sensor, unsigned char i2c_address)
 	}
 
 	if (ioctl(fd, I2C_SLAVE, i2c_address) < 0) {
+		
 		fprintf(stderr, "ioctl error: %s\n", strerror(errno));
 		sensor->present = 0;
 		return 1;
+	}
+	
+	// Try to read from sensor to check if it present
+	if (read(fd, buf, 3) != 3)
+	{
+		sensor->present = 0;
+		return (1);
 	}
 	
 	if (g_debug > 0) printf("Opened ADS1110 on 0x%x\n", i2c_address);

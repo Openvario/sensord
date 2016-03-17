@@ -538,7 +538,6 @@ int main (int argc, char **argv) {
 		if (ads1110_open(&voltage_sensor, 0x48) != 0)
 		{
 			fprintf(stderr, "Open sensor failed !!\n");
-			return 1;
 		}
 		
 		//initialize differential pressure sensor
