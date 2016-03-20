@@ -9,14 +9,18 @@ OBJ_CAL = $(patsubst %,$(ODIR)/%,$(_OBJ_CAL))
 LIBS = -lrt -lm
 ODIR = obj
 BINDIR = /opt/bin/
+GIT_VERSION := $(shell git describe)
 
 #targets
 
 $(ODIR)/%.o: %.c
 	mkdir -p $(ODIR)
-	$(CC) -c -o $@ $< $(CFLAGS)
-
+	$(CC) -DVERSION_GIT=\"$(GIT_VERSION)\" -c -o $@ $< $(CFLAGS)
+	
 all: sensord sensorcal
+
+version.h: 
+	@echo Git version $(GIT_VERSION)
 	
 doc: 
 	@echo Running doxygen to create documentation
@@ -44,4 +48,4 @@ clean:
 	rm -f $(ODIR)/*.o *~ core $(EXECUTABLE)
 	rm -fr doc
 
-.PHONY: clean all doc	
+.PHONY: clean all doc

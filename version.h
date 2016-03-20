@@ -20,3 +20,7 @@
 #define VERSION_MAJOR '0'
 #define VERSION_MINOR '2'
 #define VERSION_RELEASE '4'
+
+#ifndef VERSION_GIT
+#error "git version not known !!"
+#endif

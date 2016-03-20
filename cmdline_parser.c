@@ -59,7 +59,7 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 		switch (c) {
 			case 'v':
 				//sprintf(s, "sensord V0.1 %s %s", __DATE__
-				printf("sensord V%c.%c RELEASE %c build: %s %s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_RELEASE,  __DATE__, __TIME__);
+				printf("sensord V%c.%c RELEASE %c build: %s %s %s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_RELEASE, VERSION_GIT, __DATE__, __TIME__);
 				printf("sensord  Copyright (C) 2014  see AUTHORS on www.openvario.org\n");
 				printf("This program comes with ABSOLUTELY NO WARRANTY;\n");
 				printf("This is free software, and you are welcome to redistribute it under certain conditions;\n"); 
