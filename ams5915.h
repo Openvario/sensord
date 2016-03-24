@@ -18,6 +18,7 @@
 */
 
 #include <time.h>
+#include <stdint.h>
 
 // variable definitions
 
@@ -25,20 +26,18 @@
 typedef struct {
 	int fd;
 	unsigned char address;
-	int digoutpmin;
-	int digoutpmax;
-	int digoutp;
-	unsigned int digoutT;
-	int pmin;
-	int pmax;
+	uint16_t digoutpmin;
+	uint16_t digoutpmax;
+	uint16_t digoutp;
+	uint16_t digoutT;
+	uint8_t pmin;
+	uint8_t pmax;
 	float sensp;
 	float T;
 	float p;
 	float linearity;
 	float offset;
 	int valid;
-	struct timespec sample;
-	struct timespec last_sample;
 } t_ams5915;
 
 // prototypes
