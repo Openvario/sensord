@@ -18,6 +18,7 @@
 */
 
 #include <time.h>
+#include <stdint.h>
 
 // variable definitions
 
@@ -25,19 +26,19 @@
 typedef struct {
 	int fd;
 	unsigned char address;
-	unsigned long C1s;
-	unsigned long C2s;
-	unsigned long C3;
-	unsigned long C4;
-	unsigned long C5s;
-	unsigned long C6;
-	unsigned long int D1;
-	unsigned long int D2;
-	long long dT;
-	long int temp;
-	long long int off;
-	long long int sens;
-	long int p_meas;
+	uint32_t C1s;
+	uint32_t C2s;
+	uint16_t C3;
+	uint16_t C4;
+	uint32_t C5s;
+	uint16_t C6;
+	uint32_t D1;
+	uint32_t D2;
+	int32_t dT;
+	int32_t temp;
+	int64_t off;
+	int64_t sens;
+	int32_t p_meas;
 	float p;
 	float linearity;
 	float offset;
@@ -48,6 +49,7 @@ typedef struct {
 
 // prototypes
 int ms5611_init(t_ms5611 *);
+int ms5611_reset(t_ms5611 *);
 int ms5611_measure(t_ms5611 *);
 int ms5611_calculate(t_ms5611 *);
 int ms5611_open(t_ms5611 *, unsigned char);
