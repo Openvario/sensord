@@ -185,7 +185,6 @@ int NMEA_message_handler(int sock)
 				}
 				// Compose POV slow NMEA sentences
 				result = Compose_Pressure_POV_fast(&s[0], vario);
-				printf("%s", s);
 				
 				// NMEA sentence valid ?? Otherwise print some error !!
 				if (result != 1)
@@ -351,6 +350,8 @@ void pressure_measurement_handler(void)
 			ms5611_read_temp(&static_sensor);
 			ms5611_read_temp(&tep_sensor);
 			break;
+		default:
+			break;
 	}
 	
 	// take care for statemachine counter
@@ -510,6 +511,8 @@ int main (int argc, char **argv) {
 		}
 		
 		//initialize static pressure sensor
+		ms5611_reset(&static_sensor);
+		usleep(10000);
 		ms5611_init(&static_sensor);
 		static_sensor.valid = 1;
 				
@@ -522,6 +525,8 @@ int main (int argc, char **argv) {
 		}
 		
 		//initialize tep pressure sensor
+		ms5611_reset(&tep_sensor);
+		usleep(10000);
 		ms5611_init(&tep_sensor);
 		tep_sensor.valid = 1;
 		
