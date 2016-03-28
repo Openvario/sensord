@@ -43,8 +43,7 @@ typedef struct {
 	float linearity;
 	float offset;
 	int valid;
-	struct timespec sample;
-	struct timespec last_sample;
+	int secordcomp;
 } t_ms5611;
 
 // prototypes

@@ -338,22 +338,25 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	sensor->off = (sensor->C2s + ((sensor->C4 * sensor->dT) >> 7));
 	sensor->sens = (sensor->C1s + ((sensor->C3 * sensor->dT) >> 8));
 	
-	// second order correction
-	if (sensor->temp < 2000)
+	if (sensor->secordcomp)
 	{
-		T2 = (sensor->dT * sensor->dT) >> 31;
-		OFF2 = 5 * ((int64_t)(sensor->temp - 2000) * (sensor->temp - 2000)) >> 1;
-		SENS2 = 5 * ((int64_t)(sensor->temp - 2000) * (sensor->temp - 2000)) >> 2;
-		
-		if (sensor->temp < -1500)
+		// second order correction
+		if (sensor->temp < 2000)
 		{
-			OFF2 = OFF2 + 7 * (int64_t)(sensor->temp + 1500) * (sensor->temp + 1500);
-			SENS2 = SENS2 + (11 * (int64_t)(sensor->temp + 1500) * (sensor->temp + 1500) >> 1);
-		}
-		
-		sensor->temp = sensor->temp - T2;
-		sensor->off = sensor->off - OFF2;
-		sensor->sens = sensor->sens - SENS2;
+			T2 = (sensor->dT * sensor->dT) >> 31;
+			OFF2 = 5 * ((int64_t)(sensor->temp - 2000) * (sensor->temp - 2000)) >> 1;
+			SENS2 = 5 * ((int64_t)(sensor->temp - 2000) * (sensor->temp - 2000)) >> 2;
+			
+			if (sensor->temp < -1500)
+			{
+				OFF2 = OFF2 + 7 * ((int64_t)(sensor->temp + 1500) * (sensor->temp + 1500));
+				SENS2 = SENS2 + ((11 * ((int64_t)(sensor->temp + 1500) * (sensor->temp + 1500))) >> 1);
+			}
+			
+			sensor->temp = sensor->temp - T2;
+			sensor->off = sensor->off - OFF2;
+			sensor->sens = sensor->sens - SENS2;
+		}	
 	}
 	
 	sensor->p_meas = (((sensor->D1 * sensor->sens) >> 21) - sensor->off) >> 15;

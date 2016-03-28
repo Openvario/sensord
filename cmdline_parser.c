@@ -30,6 +30,7 @@ extern int g_debug;
 extern int g_log;
 
 extern int g_foreground;
+extern int g_secordcomp;
 
 extern FILE *fp_console;
 extern FILE *fp_sensordata;
@@ -50,11 +51,12 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 	"  -c [filename]   use config file [filename]\n"\
     "  -d[n]           set debug level. n can be [1..2]. default=1\n"\
 	"  -r [filename]   record measurement values to file\n"\
+	"  -s              second order temperature compensation for MS5611 enable"
 	"  -p [filename]   use values from file instead of measuring\n"\
 	"\n";
 	
 	// check commandline arguments
-	while ((c = getopt (argc, argv, "vd::flhr:p:c:")) != -1)
+	while ((c = getopt (argc, argv, "vd::flhr:p:c:s")) != -1)
 	{
 		switch (c) {
 			case 'v':
@@ -107,6 +109,12 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 				// don't daemonize
 				printf("!! STAY in g_foreground !!\n");
 				g_foreground = TRUE;
+				break;
+				
+			case 's':
+				// enable second order compensation
+				printf("Second order compenstaion ENABLE");
+				g_secordcomp = TRUE;
 				break;
 				
 			case 'r':

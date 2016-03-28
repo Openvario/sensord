@@ -79,6 +79,7 @@ float p_static;
 float p_dynamic;
 
 int g_foreground=FALSE;
+int g_secordcomp=FALSE;
 
 t_io_mode io_mode;
 
@@ -514,6 +515,7 @@ int main (int argc, char **argv) {
 		ms5611_reset(&static_sensor);
 		usleep(10000);
 		ms5611_init(&static_sensor);
+		static_sensor.secordcomp = g_secordcomp;
 		static_sensor.valid = 1;
 				
 		// open sensor for velocity pressure
@@ -528,6 +530,7 @@ int main (int argc, char **argv) {
 		ms5611_reset(&tep_sensor);
 		usleep(10000);
 		ms5611_init(&tep_sensor);
+		tep_sensor.secordcomp = g_secordcomp;
 		tep_sensor.valid = 1;
 		
 		// open sensor for differential pressure
