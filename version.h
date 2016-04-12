@@ -19,7 +19,7 @@
 
 #define VERSION_MAJOR '0'
 #define VERSION_MINOR '3'
-#define VERSION_RELEASE '2'
+#define VERSION_RELEASE '3'
 
 #ifndef VERSION_GIT
 #error "git version not known !!"
