@@ -288,7 +288,7 @@ int ms5611_read_temp(t_ms5611 *sensor)
 
 	// calculate dT and absolute temperature
 	sensor->dT = sensor->D2 - sensor->C5s;
-	sensor->temp = 2000 + ((sensor->dT * sensor->C6) >> 23);
+	sensor->temp = 2000 + (((int64_t)sensor->dT * sensor->C6) / 8388608);
 			
 	// debug print
 	ddebug_print("%s @ 0x%x: D2 = %u\n", __func__, sensor->address, sensor->D2);
@@ -335,8 +335,8 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	//SENS = C1 * 2**15 + (C3 * dT) / 2**8
 	//P = (D1 * SENS / 2**21 - OFF) / 2**15
 			
-	sensor->off = (sensor->C2s + ((sensor->C4 * sensor->dT) >> 7));
-	sensor->sens = (sensor->C1s + ((sensor->C3 * sensor->dT) >> 8));
+	sensor->off = (sensor->C2s + (((int64_t)sensor->C4 * sensor->dT) >> 7));
+	sensor->sens = (sensor->C1s + (((int64_t)sensor->C3 * sensor->dT) >> 8));
 	
 	if (sensor->secordcomp)
 	{
