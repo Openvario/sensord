@@ -35,7 +35,6 @@
 #include <syslog.h>
 //#include "version.h"
 #include "nmea.h"
-//#include "w1.h"
 #include "def.h"
 #include "KalmanFilter1d.h"
 
@@ -44,6 +43,7 @@
 #include "ms5611.h"
 #include "ams5915.h"
 #include "ads1110.h"
+#include "ds2482.h"
 #include "configfile_parser.h"
 #include "vario.h"
 #include "AirDensity.h"
@@ -66,6 +66,7 @@ t_ms5611 static_sensor;
 t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
 t_ads1110 voltage_sensor;
+t_ds2482 temperature_sensor;
 	
 // configuration object
 t_config config;
@@ -220,6 +221,22 @@ int NMEA_message_handler(int sock)
 					break;
 				}
 			}
+			
+			if(config.output_POV_T == 1 && temperature_sensor.present) {
+				result = Compose_Temperature_POV(&s[0], temperature_sensor.celsius);
+				
+				// NMEA sentence valid ?? Otherwise print some error !!
+				if (result != 1) {
+					printf("POV temp NMEA Result = %s\n", s);
+				}	
+				
+				// Send NMEA string via socket to XCSoar
+				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+				{	
+					fprintf(stderr, "send failed\n");
+					break;
+				}
+			}
 			break;
 		default:
 			break;
@@ -293,6 +310,8 @@ void pressure_measurement_handler(void)
 					ads1110_measure(&voltage_sensor);
 					ads1110_calculate(&voltage_sensor);
 				}
+				
+				ds2482_measure(&temperature_sensor);
 			}
 			else
 			{
@@ -403,6 +422,7 @@ int main (int argc, char **argv) {
 	
 	config.output_POV_E = 0;
 	config.output_POV_P_Q = 0;
+	config.output_POV_T = 0;
 	
 	//open file for raw output
 	//fp_rawlog = fopen("raw.log","w");
@@ -412,7 +432,7 @@ int main (int argc, char **argv) {
 	
 	// get config file options
 	if (fp_config != NULL)
-		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &config);
+		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &temperature_sensor, &config);
 	
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
@@ -548,6 +568,11 @@ int main (int argc, char **argv) {
 			fprintf(stderr, "Open sensor failed !!\n");
 		}
 		
+		if (ds2482_open(&temperature_sensor, 0x18) != 0)
+		{
+			fprintf(stderr, "Open ds2482 sensor failed !!\n");
+		}
+		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
 		dynamic_sensor.valid = 1;
@@ -555,6 +580,8 @@ int main (int argc, char **argv) {
 		//initialize voltage sensor
 		if(voltage_sensor.present)
 			ads1110_init(&voltage_sensor);
+		
+		ds2482_init(&temperature_sensor);
 		
 		// poll sensors for offset compensation
 		ms5611_start_temp(&static_sensor);
@@ -596,19 +623,19 @@ int main (int argc, char **argv) {
 		server.sin_addr.s_addr = inet_addr("127.0.0.1");
 		server.sin_family = AF_INET;
 		server.sin_port = htons(4353);
-		
+			
 		// try to connect to XCSoar
 		while (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
 			fprintf(stderr, "failed to connect, trying again\n");
 			fflush(stdout);
 			sleep(1);
 		}
-				
+		
 		// socket connected
 		// main data acquisition loop
 		while(sock_err >= 0)
 		{	int result;
-		
+
 			result = usleep(12500);
 			if (result != 0)
 			{
@@ -622,7 +649,6 @@ int main (int argc, char **argv) {
 		
 		// connection dropped
 		close(sock);
-	}
 	return 0;
 }	
 

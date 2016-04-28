@@ -17,13 +17,27 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.	
 */
 
-#ifndef NMEA_H
-#define NMEA_H 
+// define struct for DS2482+DS18B20 sensor
+typedef struct {
+	float celsius;
+	unsigned char present;
+	
+	int fd;
+	unsigned char address;
+} t_ds2482;
 
-unsigned char NMEA_checksum(char *);
-int Compose_Pressure_POV_slow(char *, float, float);
-int Compose_Pressure_POV_fast(char *, float);
-int Compose_Voltage_POV(char *sentence, float voltage);
-int Compose_Temperature_POV(char *sentence, float temperature);
+// prototypes
+int ds2482_open(t_ds2482 *, unsigned char);
+int ds2482_init(t_ds2482 *);
+int ds2482_measure(t_ds2482 *);
 
-#endif
+unsigned char ds2482_reset();
+unsigned char ds2482_get_status();
+unsigned char ds2482_read(unsigned char *buf, unsigned int dataLength);
+unsigned char ds2482_write(unsigned char *buf, unsigned int dataLength);
+
+int OWReset();
+int OWWriteByte(unsigned char byte);
+int OWReadByte() ;
+int OWWaitForBusyEnd();
+void OWReadTemperature();

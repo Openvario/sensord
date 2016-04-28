@@ -183,6 +183,47 @@ int Compose_Voltage_POV(char *sentence, float voltage)
 	return (success);
 }
 
+
+/**
+* @brief Implements the $POV NMEA Sentence for temperature
+* @param sentence char pointer for created string
+* @param Measured temperature in Celsius degrees
+* @return result
+* 
+* Implementation of the properitary NMEA sentence for AKF Glidecomputer
+* \n
+*
+*     $POV,T,Temperature*CRC
+*       |  |      |       |
+*       1  2      3       4
+*
+*     1: $P            		Properitary NMEA Sentence
+*        OV         		Manufacturer Code: OpenVario
+*
+*     2: T               	Code for Temperature in Celsius degrees
+*     
+*     3: Temperature           Format: +19.5
+*
+* @date 27.03.2016 born
+*
+*/ 
+int Compose_Temperature_POV(char *sentence, float temperature)
+{
+	int length;
+	int success = 1;
+	
+	// compose NMEA String
+	length = sprintf(sentence, "$POV,T,%+05.2f", temperature); 
+	
+	// Calculate NMEA checksum and add to string
+	sprintf(sentence + length, "*%02X\n", NMEA_checksum(sentence));
+	
+	//print sentence for debug
+	debug_print("NMEA sentence: %s\n", sentence);
+	return (success);
+}
+
+
 /**
 * @brief Implements the NMEA Checksum
 * @param char* NMEA string
