@@ -644,11 +644,11 @@ int main (int argc, char **argv) {
 			}
 			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
+		}
+	} // while(1)
 		
-		} // while(1)
-		
-		// connection dropped
-		close(sock);
+	// connection dropped
+	close(sock);
 	return 0;
 }	
 
