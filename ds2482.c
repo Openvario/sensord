@@ -57,8 +57,6 @@ extern FILE *fp_console;
 
 #define POLL_LIMIT 				30
 
-t_ds2482 *_sensor;
-
 int ds2482_open(t_ds2482 *sensor, unsigned char i2c_address) {
 	// local variables
 	int fd;
@@ -86,25 +84,23 @@ int ds2482_open(t_ds2482 *sensor, unsigned char i2c_address) {
 
 }
 int ds2482_init(t_ds2482 *sensor) {
-	_sensor = sensor;
-	return ds2482_reset();
+	return ds2482_reset(sensor);
 }
 
 int ds2482_measure(t_ds2482 *sensor) {
-	_sensor = sensor;
-	_sensor->present = 0;
+	sensor->present = 0;
 	
 	// reset sensor
-	if (OWReset()) { //Reset was successful
-		OWWriteByte(DS1820_CMD_SKIP_ROM); //Issue the Skip ROM command, there's only one 1-wire slave
-		OWWriteByte(DS1820_CMD_CONVERT_TEMP); //start conversion
+	if (OWReset(sensor)) { //Reset was successful
+		OWWriteByte(sensor, DS1820_CMD_SKIP_ROM); //Issue the Skip ROM command, there's only one 1-wire slave
+		OWWriteByte(sensor, DS1820_CMD_CONVERT_TEMP); //start conversion
 		
 		usleep(5000);
 		
-		if(OWReset()) {
-			OWWriteByte(DS1820_CMD_SKIP_ROM); //Issue the Skip ROM command
-			OWWriteByte(DS1820_CMD_READ_SCRATCHPAD); //Read Scratchpad
-			OWReadTemperature();
+		if(OWReset(sensor)) {
+			OWWriteByte(sensor, DS1820_CMD_SKIP_ROM); //Issue the Skip ROM command
+			OWWriteByte(sensor, DS1820_CMD_READ_SCRATCHPAD); //Read Scratchpad
+			OWReadTemperature(sensor);
 			
 			return 0;
 		}
@@ -113,17 +109,17 @@ int ds2482_measure(t_ds2482 *sensor) {
 }
 
 
-unsigned char ds2482_reset() {
+unsigned char ds2482_reset(t_ds2482 *sensor) {
 	unsigned char buf[2];
 	unsigned char conf;
 	
 	ddebug_print("ds2482 - reset\n");
 	
-	OWWaitForBusyEnd();
+	OWWaitForBusyEnd(sensor);
 	
 	// reset
 	buf[0] = CMD_RESET;
-	ds2482_write(buf, 1);
+	ds2482_write(sensor, buf, 1);
 	
 	usleep(5000);
 	
@@ -137,38 +133,38 @@ unsigned char ds2482_reset() {
 	buf[0] = CMD_WRITE_CONFIG;
 	buf[1] = conf;
 	buf[1] = buf[1] | (~buf[1] << 4); // The upper nibble in bitwise inverted when written to the DS2482.
-	ds2482_write(buf, 2);
+	ds2482_write(sensor, buf, 2);
 	
 	buf[0] = CMD_SET_READ_POINTER;
 	buf[1] = REG_CONF;
-	ds2482_write(buf, 2);
+	ds2482_write(sensor, buf, 2);
 	
-	ds2482_read(buf, 1);
+	ds2482_read(sensor, buf, 1);
 	if(buf[0] != conf) {		
 		ddebug_print("ds2482 - config set failed.%x\n", buf[0]);
 		return (1);
 	}
 	return (0);
 }
-unsigned char ds2482_get_status() {
+unsigned char ds2482_get_status(t_ds2482 *sensor) {
 	unsigned char buf[2];
 	buf[0] = CMD_SET_READ_POINTER;
 	buf[1] = REG_STATUS;
-	ds2482_write(buf, 2);
-	ds2482_read(buf, 1);
+	ds2482_write(sensor, buf, 2);
+	ds2482_read(sensor, buf, 1);
 	return buf[0];
 }
 
-unsigned char ds2482_read(unsigned char *buf, unsigned int dataLength) {
-	if (read(_sensor->fd, buf, dataLength) != dataLength) {
+unsigned char ds2482_read(t_ds2482 *sensor, unsigned char *buf, unsigned int dataLength) {
+	if (read(sensor->fd, buf, dataLength) != dataLength) {
 		ddebug_print("Unable to read from slave ds2482\n");
 		return(1);
 	} else {
 		return (0);
 	}
 }
-unsigned char ds2482_write(unsigned char *buf, unsigned int dataLength) {
-	if (write(_sensor->fd, buf, dataLength) != dataLength) {
+unsigned char ds2482_write(t_ds2482 *sensor, unsigned char *buf, unsigned int dataLength) {
+	if (write(sensor->fd, buf, dataLength) != dataLength) {
 		ddebug_print("Unable to write to slave ds2482: %x\n", buf[0]);
 		return(1);
 	} else {
@@ -176,17 +172,17 @@ unsigned char ds2482_write(unsigned char *buf, unsigned int dataLength) {
 	}
 }
 
-int OWReset() {
+int OWReset(t_ds2482 *sensor) {
 	unsigned int loopcount = 0;
 	unsigned char status;
 	unsigned char buf[1];
 	
 	buf[0] = CMD_1_WIRE_RESET;
-	ds2482_write(buf, 1); //1-wire reset
+	ds2482_write(sensor, buf, 1); //1-wire reset
     
 	while(1) {
         loopcount++;
-        status = ds2482_get_status();
+        status = ds2482_get_status(sensor);
 		if (status & 0x01) { // 1-Wire Busy bit
 			if (loopcount > POLL_LIMIT) {
 				ddebug_print("One-Wire busy too long\n");
@@ -209,40 +205,40 @@ int OWReset() {
     return 1;
 }
 
-int OWWriteByte(unsigned char byte) {
-	if(OWWaitForBusyEnd()) {
+int OWWriteByte(t_ds2482 *sensor, unsigned char byte) {
+	if(OWWaitForBusyEnd(sensor)) {
 		unsigned char buf[2];
 		buf[0] = CMD_1_WIRE_WRITE_BYTE;
 		buf[1] = byte;
-		ds2482_write(buf, 2); //set write byte command (A5) and send data (byte)
+		ds2482_write(sensor, buf, 2); //set write byte command (A5) and send data (byte)
 		return 1;
 	}
 	return 0;
 }
 
-int OWReadByte() {
+int OWReadByte(t_ds2482 *sensor) {
 	unsigned char buf[2];
-	if(OWWaitForBusyEnd()) {
+	if(OWWaitForBusyEnd(sensor)) {
 		buf[0] = CMD_1_WIRE_READ_BYTE;
-		ds2482_write(buf, 1); //send read byte command (96)
+		ds2482_write(sensor, buf, 1); //send read byte command (96)
 		
-		if(OWWaitForBusyEnd()) {
+		if(OWWaitForBusyEnd(sensor)) {
 			buf[0] = CMD_SET_READ_POINTER;
 			buf[1] = REG_READ;
-			ds2482_write(buf, 2); //set read pointer (E1) to the read data register (E1)
+			ds2482_write(sensor, buf, 2); //set read pointer (E1) to the read data register (E1)
 	   
-			ds2482_read(buf, 1); //Read the data register
+			ds2482_read(sensor, buf, 1); //Read the data register
 			return buf[0];
 		}
 	}
 	return -1;
 }
 
-int OWWaitForBusyEnd() {
+int OWWaitForBusyEnd(t_ds2482 *sensor) {
 	unsigned int loopcount = 0;
 	unsigned char status;
 	do {
-		status = ds2482_get_status();
+		status = ds2482_get_status(sensor);
 		if(status & 0x01) {
 			if (++loopcount > POLL_LIMIT) {
 				ddebug_print("One-Wire busy for too long\n");
@@ -257,11 +253,11 @@ int OWWaitForBusyEnd() {
 }
 
 
-void OWReadTemperature() {
+void OWReadTemperature(t_ds2482 *sensor) {
     unsigned char data[5] = {0, 0, 0, 0, 0};
     unsigned int i;
     for(i = 0; i <= 5; i++) {
-        data[i] = OWReadByte();
+        data[i] = OWReadByte(sensor);
 		if(data[i] == -1) {
 			ddebug_print("One-Wire error reading sensor\n");
 			return;
@@ -287,10 +283,10 @@ void OWReadTemperature() {
 		raw = (raw ^ 0xffff) + 1;
 	}
     float celsius = raw / 16.0;
-	if(neg) celsius = -celsius;
+    if(neg) celsius = -celsius;
     if(celsius >= -55.0 && celsius <= 125.0) {
-		_sensor->celsius = celsius;
-		_sensor->present = 1;
+		sensor->celsius = celsius;
+		sensor->present = 1;
 	} else {
 		printf("One-Wire temperature out of range %f\n", celsius);
 	}

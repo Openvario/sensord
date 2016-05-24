@@ -31,13 +31,13 @@ int ds2482_open(t_ds2482 *, unsigned char);
 int ds2482_init(t_ds2482 *);
 int ds2482_measure(t_ds2482 *);
 
-unsigned char ds2482_reset();
-unsigned char ds2482_get_status();
-unsigned char ds2482_read(unsigned char *buf, unsigned int dataLength);
-unsigned char ds2482_write(unsigned char *buf, unsigned int dataLength);
+unsigned char ds2482_reset(t_ds2482 *);
+unsigned char ds2482_get_status(t_ds2482 *);
+unsigned char ds2482_read(t_ds2482 *, unsigned char *buf, unsigned int dataLength);
+unsigned char ds2482_write(t_ds2482 *, unsigned char *buf, unsigned int dataLength);
 
-int OWReset();
-int OWWriteByte(unsigned char byte);
-int OWReadByte() ;
-int OWWaitForBusyEnd();
-void OWReadTemperature();
+int OWReset(t_ds2482 *);
+int OWWriteByte(t_ds2482 *, unsigned char byte);
+int OWReadByte(t_ds2482 *) ;
+int OWWaitForBusyEnd(t_ds2482 *);
+void OWReadTemperature(t_ds2482 *);
