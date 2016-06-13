@@ -74,8 +74,7 @@ int ds2482_open(t_ds2482 *sensor, unsigned char i2c_address) {
 		return 1;
 	}
 	
-	
-	ddebug_print("Opened ds2482 on 0x%x\n", i2c_address);
+	debug_print("Opened ds2482 on 0x%x\n", i2c_address);
 	
 	// assign file handle to sensor object
 	sensor->fd = fd;
@@ -84,26 +83,29 @@ int ds2482_open(t_ds2482 *sensor, unsigned char i2c_address) {
 
 }
 int ds2482_init(t_ds2482 *sensor) {
+	ds2482_start(sensor);
+	usleep(5000);
+	ds2482_measure(sensor);
+	
 	return ds2482_reset(sensor);
 }
 
-int ds2482_measure(t_ds2482 *sensor) {
-	sensor->present = 0;
-	
-	// reset sensor
+int ds2482_start(t_ds2482 *sensor) {
 	if (OWReset(sensor)) { //Reset was successful
 		OWWriteByte(sensor, DS1820_CMD_SKIP_ROM); //Issue the Skip ROM command, there's only one 1-wire slave
 		OWWriteByte(sensor, DS1820_CMD_CONVERT_TEMP); //start conversion
+		return 0;
+	}
+	return (1);
+}
+
+int ds2482_measure(t_ds2482 *sensor) {
+	if(OWReset(sensor)) {
+		OWWriteByte(sensor, DS1820_CMD_SKIP_ROM); //Issue the Skip ROM command
+		OWWriteByte(sensor, DS1820_CMD_READ_SCRATCHPAD); //Read Scratchpad
+		OWReadTemperature(sensor);
 		
-		usleep(5000);
-		
-		if(OWReset(sensor)) {
-			OWWriteByte(sensor, DS1820_CMD_SKIP_ROM); //Issue the Skip ROM command
-			OWWriteByte(sensor, DS1820_CMD_READ_SCRATCHPAD); //Read Scratchpad
-			OWReadTemperature(sensor);
-			
-			return 0;
-		}
+		return 0;
 	}
 	return (1);
 }
@@ -121,7 +123,7 @@ unsigned char ds2482_reset(t_ds2482 *sensor) {
 	buf[0] = CMD_RESET;
 	ds2482_write(sensor, buf, 1);
 	
-	usleep(5000);
+	usleep(500);
 	
 	// write config
 	//   1-Wire speed (c1WS) = standard (0)

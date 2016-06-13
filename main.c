@@ -281,6 +281,10 @@ void pressure_measurement_handler(void)
 				// start pressure measurement
 				ms5611_start_pressure(&static_sensor);
 				ms5611_start_pressure(&tep_sensor);
+				
+				if(temperature_sensor.present) {
+					ds2482_start(&temperature_sensor);
+				}
 			}
 			break;
 		
@@ -311,7 +315,9 @@ void pressure_measurement_handler(void)
 					ads1110_calculate(&voltage_sensor);
 				}
 				
-				ds2482_measure(&temperature_sensor);
+				if(temperature_sensor.present) {
+					ds2482_measure(&temperature_sensor);
+				}
 			}
 			else
 			{

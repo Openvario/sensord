@@ -29,6 +29,7 @@ typedef struct {
 // prototypes
 int ds2482_open(t_ds2482 *, unsigned char);
 int ds2482_init(t_ds2482 *);
+int ds2482_start(t_ds2482 *);
 int ds2482_measure(t_ds2482 *);
 
 unsigned char ds2482_reset(t_ds2482 *);
