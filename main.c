@@ -141,7 +141,7 @@ int NMEA_message_handler(int sock)
 {
 	// some local variables
 	float vario;
-	int sock_err;
+	int sock_err = 0;
 	static int nmea_counter = 1;
 	int result;
 	char s[256];
@@ -159,7 +159,8 @@ int NMEA_message_handler(int sock)
 			// Compute Vario
 			vario = ComputeVario(vkf.x_abs_, vkf.x_vel_);
 			
-			if (config.output_POV_P_Q == 1)
+			if (config.output_POV_P_Q == 1
+				|| io_mode.sensordata_from_file == TRUE)
 			{
 				// Compose POV slow NMEA sentences
 				result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
@@ -178,7 +179,8 @@ int NMEA_message_handler(int sock)
 				}
 			}
 			
-			if (config.output_POV_E == 1)
+			if (config.output_POV_E == 1
+				|| io_mode.sensordata_from_file == TRUE)
 			{
 				if (tep_sensor.valid != 1)
 				{
@@ -202,6 +204,8 @@ int NMEA_message_handler(int sock)
 			}
 			
 			if (config.output_POV_V == 1 && voltage_sensor.present)
+			// lets skip Voltage for now
+				// || io_mode.sensordata_from_file == TRUE)
 			{
 
 				// Compose POV slow NMEA sentences
@@ -301,7 +305,12 @@ void pressure_measurement_handler(void)
 					printf("End of File reached\n");
 					printf("Exiting ...\n");
 					exit(EXIT_SUCCESS);
+				} else {
+					// TODO
+					// I don't understand what value is expected for tep_sensor.p, I'm getting m/s from the file
+					// printf (">>%f,%f,%f\n",tep_sensor.p, static_sensor.p, dynamic_sensor.p);
 				}
+
 			}
 			
 			//
@@ -314,12 +323,15 @@ void pressure_measurement_handler(void)
 			if ((tep_sensor.p/100 < 100) || (tep_sensor.p/100 > 1200))
 			{
 				// tep pressure out of range
+				// printf("tep_sensor.p OOR: %f\n",tep_sensor.p);
 				tep_sensor.valid = 0;
 			}
 			else
 			{
 				// of tep pressure
 				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, 0.05);
+				tep_sensor.valid = 1;
+				// printf("tep_sensor.p OK: %f\n",tep_sensor.p);
 			}
 			
 			// of dynamic pressure
@@ -348,8 +360,12 @@ void pressure_measurement_handler(void)
 			break;
 		case 4:
 			// read temp values
-			ms5611_read_temp(&static_sensor);
-			ms5611_read_temp(&tep_sensor);
+			if (io_mode.sensordata_from_file != TRUE)
+			{
+				// skip it if we read from file.
+				ms5611_read_temp(&static_sensor);
+				ms5611_read_temp(&tep_sensor);
+			}
 			break;
 		default:
 			break;
@@ -593,6 +609,8 @@ int main (int argc, char **argv) {
 		if (sock == -1)
 			fprintf(stderr, "could not create socket\n");
   
+		// make sure the structure is in a known stat before caling connect()
+		memset(&server,0,sizeof(server));
 		server.sin_addr.s_addr = inet_addr("127.0.0.1");
 		server.sin_family = AF_INET;
 		server.sin_port = htons(4353);
@@ -604,6 +622,10 @@ int main (int argc, char **argv) {
 			sleep(1);
 		}
 				
+		// If timing is critical the socket should be non-blocking
+		// otherwise send() might hang for some time
+		fcntl(sock, F_SETFL, O_NONBLOCK);
+
 		// socket connected
 		// main data acquisition loop
 		while(sock_err >= 0)
@@ -617,6 +639,8 @@ int main (int argc, char **argv) {
 			}
 			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
+			// make sure to keep the timing if we don't read the real sensors
+			if (io_mode.sensordata_from_file == TRUE) usleep(100000);
 		
 		} // while(1)
 		
