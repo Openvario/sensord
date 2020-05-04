@@ -141,7 +141,8 @@ int NMEA_message_handler(int sock)
 {
 	// some local variables
 	float vario;
-	int sock_err;
+	// initialize return value
+	int sock_err = 0;
 	static int nmea_counter = 1;
 	int result;
 	char s[256];
@@ -593,6 +594,8 @@ int main (int argc, char **argv) {
 		if (sock == -1)
 			fprintf(stderr, "could not create socket\n");
   
+		// make sure the structure is in a known stat before caling connect()
+		memset(&server,0,sizeof(server));
 		server.sin_addr.s_addr = inet_addr("127.0.0.1");
 		server.sin_family = AF_INET;
 		server.sin_port = htons(4353);
@@ -603,7 +606,11 @@ int main (int argc, char **argv) {
 			fflush(stdout);
 			sleep(1);
 		}
-				
+
+		// If timing is critical the socket should be non-blocking
+		// otherwise send() might hang for some time
+		fcntl(sock, F_SETFL, O_NONBLOCK);
+
 		// socket connected
 		// main data acquisition loop
 		while(sock_err >= 0)
