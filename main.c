@@ -222,6 +222,7 @@ int NMEA_message_handler(int sock)
 			}
 			break;
 		default:
+			sock_err = 0;
 			break;
 	}
 	
@@ -617,6 +618,7 @@ int main (int argc, char **argv) {
 			}
 			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
+			//debug_print("Sock_err: %d\n",sock_err);
 		
 		} // while(1)
 		
