@@ -141,7 +141,7 @@ int NMEA_message_handler(int sock)
 {
 	// some local variables
 	float vario;
-	int sock_err;
+	int sock_err = 0;
 	static int nmea_counter = 1;
 	int result;
 	char s[256];
