@@ -27,7 +27,7 @@ doc:
 	doxygen
 	
 sensord: $(OBJ)
-	$(CC) $(LIBS) -g -o $@ $^
+	$(CC) -g -o $@ $^ $(LIBS)
 	
 sensorcal: $(OBJ_CAL)
 	$(CC) -g -o $@ $^
@@ -36,10 +36,10 @@ install: sensord sensorcal
 	install -D sensord $(BINDIR)/$(EXECUTABLE)
 	
 test: test.o obj/nmea.o
-	$(CC) $(LIBS) -g -o $@ $^
+	$(CC) -g -o $@ $^ $(LIBS)
 
 sensord_fastsample: sensord_fastsample.o
-	$(CC) $(LIBS) -g -o $@ $^
+	$(CC) -g -o $@ $^ $(LIBS)
 
 i2c_test: i2c_test.o ms5611.o
 	$(CC) $(LIBS) -g -o $@ $^
