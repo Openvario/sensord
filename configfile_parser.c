@@ -106,8 +106,8 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 				if (strcmp(tmp,"voltage_config") == 0)
 				{
 					// get config data for dynamic sensor
-				        sscanf(line, "%s %f %f", tmp, &voltage_sensor->voltage_factor[0],&voltage_sensor->voltage_factor[1]);
-				        voltage_sensor->voltage_factor[0]=1.0/voltage_sensor->voltage_factor[0];
+				        sscanf(line, "%s %f %f", tmp, &voltage_sensor->scale,&voltage_sensor->offset);
+				        voltage_sensor->scale=1.0/voltage_sensor->scale;
 				}
 			}
 	
