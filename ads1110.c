@@ -73,9 +73,8 @@ int ads1110_open(t_ads1110 *sensor, unsigned char i2c_address)
 int ads1110_init(t_ads1110 *sensor)
 {
 	// set calibration data
-	//sensor->voltage_factor = 2.;
-	ddebug_print("%s @ 0x%x: voltage_factor=%f\n", __func__, sensor->address, sensor->voltage_factor);
-	
+
+        ddebug_print("%s @ 0x%x: voltage_scale = %f voltage_offset = %f\n", __func__, sensor->address, 1.0/sensor->scale,sensor->offset);	
 	return(0);
 	
 }
@@ -105,7 +104,7 @@ int ads1110_measure(t_ads1110 *sensor)
 int ads1110_calculate(t_ads1110 *sensor)
 {
 
-	sensor->voltage_converted = (sensor->voltage_raw/sensor->voltage_factor);
+	sensor->voltage_converted = (sensor->voltage_raw*sensor->scale+sensor->offset);
 	
 	debug_print("%s @ 0x%x: Voltage: %fV\n", __func__, sensor->address, sensor->voltage_converted);
 

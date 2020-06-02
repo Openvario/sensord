@@ -81,6 +81,7 @@ int main (int argc, char **argv) {
 	int result;
 	int c;
 	int i;
+	char sn[7];
 	char zero[1]={0x00};
 	
 	
@@ -107,7 +108,8 @@ int main (int argc, char **argv) {
 		printf("No EEPROM found !!\n");
 		exit(1);
 	}
-		
+
+	sn[6]=0;
 	// check commandline arguments
 	while ((c = getopt (argc, argv, "his:cde")) != -1)
 	{
@@ -124,7 +126,7 @@ int main (int argc, char **argv) {
 				}
 				strcpy(data.header, "OV");
 				data.data_version = EEPROM_DATA_VERSION;
-				strcpy(data.serial, "000000");
+				memset(data.serial,'0',6);
 				data.zero_offset=0.0;
 				update_checksum(&data);
 				printf("Writing data to EEPROM ...\n");
@@ -167,9 +169,10 @@ int main (int argc, char **argv) {
 				printf("Reading EEPROM values ...\n\n");
 				if( eeprom_read_data(&eeprom, &data) == 0)
 				{
+				  memcpy(sn,data.serial,6);
 					printf("Actual EEPROM values:\n");
 					printf("---------------------\n");
-					printf("Serial: \t\t\t%s\n", data.serial);
+					printf("Serial: \t\t\t%s\n", sn);
 					printf("Differential pressure offset:\t%f\n",data.zero_offset);
 				}
 				else
@@ -189,13 +192,12 @@ int main (int argc, char **argv) {
 					// read actual EEPROM values	
 					if( eeprom_read_data(&eeprom, &data) == 0)
 					{
-						for(i=0; i<7;i++)
+						for(i=0; i<6;i++)
 						{
-							data.serial[i]=*optarg;
+							sn[i]=data.serial[i]=*optarg;
 							optarg++;
 						}
-						data.serial[7]='\n';
-						printf("New Serial number: %s\n",data.serial);
+						printf("New Serial number: %s\n",sn);
 						update_checksum(&data);
 						printf("Writing data to EEPROM ...\n");
 						result = eeprom_write(&eeprom, (char*)&data, 0x00, sizeof(data));
