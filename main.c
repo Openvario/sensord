@@ -171,8 +171,7 @@ int NMEA_message_handler(int sock)
 				}	
 			
 				// Send NMEA string via socket to XCSoar
-                                // send complete sentence including terminating '\0'
-				if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0)
+				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
 				{	
 					fprintf(stderr, "send failed\n");
 					break;
@@ -195,8 +194,7 @@ int NMEA_message_handler(int sock)
 				}	
 				
 				// Send NMEA string via socket to XCSoar
-                                // send complete sentence including terminating '\0'
-				if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0)
+				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
 				{	
 					fprintf(stderr, "send failed\n");
 					break;
@@ -216,8 +214,7 @@ int NMEA_message_handler(int sock)
 				}	
 				
 				// Send NMEA string via socket to XCSoar
-                                // send complete sentence including terminating '\0'
-				if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0)
+				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
 				{	
 					fprintf(stderr, "send failed\n");
 					break;
