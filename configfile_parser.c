@@ -26,12 +26,13 @@
 #include "ms5611.h"
 #include "ams5915.h"
 #include "ads1110.h"
+#include "ds2482.h"
 #include "configfile_parser.h"
 
 extern int g_debug;
 extern FILE *fp_console;
 
-int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_ams5915 *dynamic_sensor, t_ads1110 *voltage_sensor, t_config *config)
+int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_ams5915 *dynamic_sensor, t_ads1110 *voltage_sensor, t_ds2482 *temp_sensor, t_config *config)
 {
 	char line[70];
 	char tmp[20];
@@ -44,7 +45,7 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 		{
 			// get line from config file
 			fgets(line, 70, fp);
-			//printf("getting line: '%69s'\n", line);
+			//printf("getting line: '%s'\n", line);
 			
 			// check if line is comment
 			if((!(line[0] == '#')) && (!(line[0] == '\n')))
@@ -71,9 +72,17 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 				if (strcmp(tmp,"output_POV_V") == 0)
 				{	
 					config->output_POV_V= 1;
-					//printf("OUTput POV_P_Q enabled !! \n");
+					//printf("OUTput POV_V enabled !! \n");
 				}
 				
+				// check for output of POV_T sentence
+				if (strcmp(tmp,"output_POV_T") == 0)
+				{					
+					config->output_POV_T= 1;
+					//printf("OUTput POV_T enabled !! \n");
+				}
+
+				    
 				// check for static_sensor
 				if (strcmp(tmp,"static_sensor") == 0)
 				{
@@ -100,6 +109,14 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 				{
 					// get config data for dynamic sensor
 					sscanf(line, "%19s %f", tmp, &config->vario_x_accel);
+				}
+				
+				// check for temp config
+				if (strcmp(tmp,"temp_config") == 0)
+				{
+					// get config data for temperature sensor
+					sscanf(line, "%19s %d", tmp, &temp_sensor->databits);
+					printf ("Read in Config data %d\n",temp_sensor->databits);
 				}
 				
 				// check for voltage sensor config

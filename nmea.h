@@ -23,6 +23,7 @@
 unsigned char NMEA_checksum(char *);
 int Compose_Pressure_POV_slow(char *, float, float);
 int Compose_Pressure_POV_fast(char *, float);
+int Compose_Temperature_POV(char *, float);
 int Compose_Voltage_POV(char *sentence, float voltage);
 
 #endif
