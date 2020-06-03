@@ -254,9 +254,7 @@ void pressure_measurement_handler(int sock)
 {
 	static int meas_counter = 1;
 	static int temp_counter = 0;
-	char s[256];
-        int result;
-	int sock_err = 0;
+
 
 	if (temp_sensor.active) {
 	   if (temp_counter==0) {
@@ -271,17 +269,18 @@ void pressure_measurement_handler(int sock)
               OWWriteByte(&temp_sensor,0xBE); //Read Scratchpad
               OWReadTemperature(&temp_sensor); // Convert output to temperature
 	      temp_counter=0;
-	       if ((temp_sensor.valid==1) && (config.output_POV_T == 1 )) {
-	      // Compose POV slow NMEA sentences
-	      result = Compose_Temperature_POV(&s[0], temp_sensor.temperature);
+	      if ((temp_sensor.valid==1) && (config.output_POV_T == 1 )) {
+	         // Compose POV slow NMEA sentences
+		 char s[256];
+	         int result = Compose_Temperature_POV(&s[0], temp_sensor.temperature);
 				
-	      // NMEA sentence valid ?? Otherwise print some error !!
-	      if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
+	         // NMEA sentence valid ?? Otherwise print some error !!
+	         if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
 				
-	      // Send NMEA string via socket to XCSoar
-              // send complete sentence including terminating '\0'
-	      if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0) fprintf(stderr, "send failed\n");
-	   }
+	         // Send NMEA string via socket to XCSoar
+                 // send complete sentence including terminating '\0'
+	         if ((send(sock, s, strlen(s)+1, 0)) < 0) fprintf(stderr, "send failed\n");
+	      }
 	   } else temp_counter++;
 	  
 		} 
@@ -410,7 +409,6 @@ int main (int argc, char **argv) {
 	// local variables
 	int i=0;
 	int result;
-	int sock_err = 0;
 	
 	t_24c16 eeprom;
 	t_eeprom_data data;
@@ -426,7 +424,7 @@ int main (int argc, char **argv) {
 	struct sigaction sigact;
 	
 	// socket communication
-	int sock;
+	//int sock;
 	struct sockaddr_in server;
 	
 	// initialize variables
@@ -635,10 +633,10 @@ int main (int argc, char **argv) {
 	while(1)
 	{
 		// reset sock_err variables
-		sock_err = 0;
+		int sock_err = 0;
 		
 		// Open Socket for TCP/IP communication
-		sock = socket(AF_INET, SOCK_STREAM, 0);
+		int sock = socket(AF_INET, SOCK_STREAM, 0);
 		if (sock == -1)
 			fprintf(stderr, "could not create socket\n");
   

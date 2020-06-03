@@ -109,7 +109,6 @@ int OWReset(t_ds2482 *sensor) {
                 if (data & 2) { //Presense-Pulse Detect bit
                    //server.log("One-Wire Devices Found");
 		   return 1;
-                   break;
                 } else {
                    //server.log("No One-Wire Devices Found");
                    return 0;
@@ -283,8 +282,7 @@ int OWTriplet(t_ds2482 *sensor) {
 
 int OWSearch(t_ds2482 *sensor) {
     //server.log("Function: OneWire Search");
-    int bitNumber = 1;
-    int lastZero = 0;
+
     int deviceAddress4ByteIndex = 0; //Fill last 4 bytes first, data from onewire comes LSB first.
     int deviceAddress4ByteMask = 1;
 
@@ -301,6 +299,9 @@ int OWSearch(t_ds2482 *sensor) {
             sensor->owLastDiscrepancy = 0;
             return 0;
         }
+	int bitNumber = 1;
+	int lastZero = 0;
+
         OWWriteByte(sensor, 0xF0); //Issue the Search ROM command        
         do { // loop to do the search
             if (bitNumber < sensor->owLastDiscrepancy) {
@@ -329,7 +330,7 @@ int OWSearch(t_ds2482 *sensor) {
                 deviceAddress4ByteIndex++;
                 deviceAddress4ByteMask = 1;
             }
-        } while (deviceAddress4ByteIndex <2);
+	} while (deviceAddress4ByteIndex <2);
 
         if (bitNumber == 65) { //if the search was successful then
             sensor->owLastDiscrepancy = lastZero;
@@ -391,11 +392,10 @@ int  AddCRC(int inbyte, int crc) {
 int OWSelect(t_ds2482 *sensor) {
     //server.log("Selecting device");
       int i,j;
-      long int da32bit; 
 	
      if (OWWriteByte(sensor, 0x4C)==-1) return 0; //Issue the Match ROM command
      for(i=0; i<2; i++) {
-        da32bit = sensor->owDeviceAddress[i];
+        long int da32bit = sensor->owDeviceAddress[i];
         for(j=0; j<4; j++) {
             //server.log(format("Writing byte: %.2X", da32bit & 0xFF));
             OWWriteByte(sensor, da32bit & 0xff); //Send lowest byte
