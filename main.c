@@ -44,6 +44,7 @@
 #include "ms5611.h"
 #include "ams5915.h"
 #include "ads1110.h"
+#include "ds2482.h"
 #include "configfile_parser.h"
 #include "vario.h"
 #include "AirDensity.h"
@@ -66,7 +67,8 @@ t_ms5611 static_sensor;
 t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
 t_ads1110 voltage_sensor;
-	
+t_ds2482 temp_sensor;
+
 // configuration object
 t_config config;
 
@@ -245,9 +247,41 @@ int NMEA_message_handler(int sock)
 * @date 17.04.2014 born
 *
 */ 
-void pressure_measurement_handler(void)
+void pressure_measurement_handler(int sock)
 {
 	static int meas_counter = 1;
+	static int temp_counter = 0;
+	char s[70];
+	int result;
+	int sock_err = 0;
+	
+	if (temp_sensor.active) {
+	   if (temp_counter==0) {
+	      OWReset(&temp_sensor);// Reset
+	      OWWriteByte(&temp_sensor,0xCC); // Skip ROM
+	      OWWriteByte(&temp_sensor,0x44); // Conversion
+	      temp_counter=1;
+	   } else 
+	   if (temp_counter == temp_sensor.rollover) {
+	     OWReset(&temp_sensor);  // Reset 
+	     OWWriteByte(&temp_sensor,0xCC); // Skip ROM
+	     OWWriteByte(&temp_sensor,0xBE); //Read Scratchpad
+	     OWReadTemperature(&temp_sensor); // Convert output to temperature
+	     temp_counter=0;
+	     if ((temp_sensor.valid==1) && (config.output_POV_T == 1 )) {
+	       // Compose POV slow NMEA sentences
+	       result = Compose_Temperature_POV(&s[0], temp_sensor.temperature);
+
+	       // NMEA sentence valid ?? Otherwise print some error !!
+	       if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
+
+	       // Send NMEA string via socket to XCSoar
+	       // send complete sentence including terminating '\0'
+	       if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0) fprintf(stderr, "send failed\n");
+	     }
+	   } else temp_counter++;
+	} 
+	
 	switch (meas_counter)
 	{
 		case 1:
@@ -413,7 +447,7 @@ int main (int argc, char **argv) {
 	
 	// get config file options
 	if (fp_config != NULL)
-		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &config);
+	  cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &temp_sensor, &config);
 	
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
@@ -548,6 +582,17 @@ int main (int argc, char **argv) {
 		{
 			fprintf(stderr, "Open sensor failed !!\n");
 		}
+
+		if (ds2482_open(&temp_sensor,0x18) != 0)
+		{
+		  fprintf(stderr,"DS2482 sensor failed !!\n");
+		} else {
+		  ds2482_reset(&temp_sensor);
+		  if (OWConfigureBits(&temp_sensor)) {
+		     temp_sensor.active=1;
+		     printf ("DS18B20 Temperature Sensor present\n");
+		  } else fprintf (stderr,"DS2482 sensor failed !!\n"); 
+		}		
 		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
@@ -616,7 +661,7 @@ int main (int argc, char **argv) {
 				printf("usleep error\n");
 				usleep(12500);
 			}
-			pressure_measurement_handler();
+			pressure_measurement_handler(sock);
 			sock_err = NMEA_message_handler(sock);
 			//debug_print("Sock_err: %d\n",sock_err);
 		
