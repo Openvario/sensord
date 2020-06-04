@@ -52,12 +52,12 @@ int ds2482_open(t_ds2482 *sensor, unsigned char i2c_address)
 	
 	if (fd < 0) {
 	   fprintf(stderr, "Error opening file: %s\n", strerror(errno));
-	   return 1;
+	   return 0;
 	}
 
 	if (ioctl(fd, I2C_SLAVE, i2c_address) < 0) {
            fprintf(stderr, "ioctl error: %s\n", strerror(errno));
-	   return 1;
+	   return 0;
 	}
 	
 	if (g_debug > 0) printf("Opened DS2482 on 0x%x\n", i2c_address);
@@ -65,21 +65,22 @@ int ds2482_open(t_ds2482 *sensor, unsigned char i2c_address)
 	//assign file handle to sensor object
 	sensor->fd = fd;
 	sensor->address = i2c_address;
-	return (0);
+	return 1;
 }
 
 int ds2482_reset(t_ds2482 *sensor) {
     //server.log(format("Function: Resetting DS2482 at %i (%#x)", I2CAddr, I2CAddr));
-    write(sensor->fd, "\xf0", 1); //reset DS2482
-    sensor->owDeviceAddress[0]=0;
-    sensor->owDeviceAddress[1]=0;
-    sensor->owTriplet=4;
-    sensor->owLastDevice=0; 
-    sensor->owLastDiscrepancy=0;
-    sensor->active=0;
-    sensor->valid=0;
-    sensor->temperature=23;
-    return 1;
+
+  if (write(sensor->fd, "\xf0", 1)!=1) return 0; //reset DS2482
+  sensor->owDeviceAddress[0]=0;
+  sensor->owDeviceAddress[1]=0;
+  sensor->owTriplet=4;
+  sensor->owLastDevice=0;
+  sensor->owLastDiscrepancy=0;
+  sensor->active=0;
+  sensor->valid=0;
+  sensor->temperature=23;
+  return 1;
 }
 
 int OWReset(t_ds2482 *sensor) {
@@ -119,6 +120,10 @@ int OWReset(t_ds2482 *sensor) {
     //server.log("One-Wire busy too long");
     return 0;
 }
+
+// Return values are:
+// -1: Failure
+//  1: Success
 
 int OWWriteByte(t_ds2482 *sensor, unsigned char writeval) {
     int i;
@@ -176,8 +181,12 @@ int OWWriteByte(t_ds2482 *sensor, unsigned char writeval) {
     }
 	
     //server.log("One-Wire Write Byte complete");
-    return 0;
+    return 1;
 }
+
+// Return values are:
+// -1:  failure
+// >=0: byte that was read out
 
 int OWReadByte(t_ds2482 *sensor) {
     int i;
@@ -245,6 +254,8 @@ int OWReadByte(t_ds2482 *sensor) {
     return data;
 }
 
+// This function is unused and untested
+
 int OWTriplet(t_ds2482 *sensor) {
     unsigned char data[2]={0x78,0};
     int i;
@@ -294,7 +305,7 @@ int OWSearch(t_ds2482 *sensor) {
         sensor->owDeviceAddress[1] = 0xFFFFFFFF;
     }
     if (!sensor->owLastDevice) { //if the last call was not the last one
-        if (!OWReset(sensor)) { //if there are no parts on 1-wire, return false
+        if (OWReset(sensor)==0) { //if there are no parts on 1-wire, return false
             sensor->owLastDiscrepancy = 0;
             return 0;
         }
@@ -352,7 +363,7 @@ int OWSearch(t_ds2482 *sensor) {
     return 0;
 }
 
-// The following function is unused and untested (and probably should be an inline function
+// The following function is unused and untested, and probably should be an inline function
 
 int OWCheckCRC(t_ds2482 *sensor) {
     int crc, j,i;
@@ -374,8 +385,7 @@ int OWCheckCRC(t_ds2482 *sensor) {
     return 0; //bad CRC
 }
 
-// The following function is unused and untested (and probably should be an
-// inline function
+// The following function is unused and untested, and probably should be an inline function
 
 int  AddCRC(int inbyte, int crc) {
     int i;
@@ -404,11 +414,16 @@ int OWSelect(t_ds2482 *sensor) {
      }
      return 1;
 }
+
+// Return values are:
+// 0:  There was a problem
+// 1:  Appears to have functioned properly
+
 int OWConfigureBits (t_ds2482 *sensor) {
 	unsigned char data[4] = {0x4e,0x00,0x00,0x7f};
 	int i,j;
 	
-	if (!OWReset(sensor)) return 0;
+	if (OWReset(sensor)==0) return 0;
 	if (OWWriteByte(sensor,0xCC)==-1) return 0;
 	
 	switch (sensor->databits) {
@@ -421,6 +436,12 @@ int OWConfigureBits (t_ds2482 *sensor) {
 	   if (OWWriteByte(sensor,data[i])==-1) j=0;	 
 	return j;
 }		
+
+
+// Return values are:
+// 0 = Not valid
+// 1 = Valid
+// 2 = Appears valid, but resolution doesn't match expected value
 
 int OWReadTemperature(t_ds2482 *sensor) {
     int data[5];
@@ -453,7 +474,7 @@ int OWReadTemperature(t_ds2482 *sensor) {
                        sensor->temperature=(i>>3)/2.0;
 		       if (sensor->databits!=9) j=2;
     }
-    if ((sensor->temperature<125) && (sensor->temperature>-55)) sensor->valid=1; else j=0;
+	if ((sensor->temperature<125) && (sensor->temperature>-55)) sensor->valid=1; else j=0;
 	
     //server.log(format("Temperature = %.1f °C", celsius));
     debug_print("%s @ 0x18: temperature %f\n",__func__,sensor->temperature);

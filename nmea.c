@@ -215,14 +215,14 @@ int Compose_Temperature_POV(char *sentence, float temperature)
   // check voltage input value for validity
   if ((temperature < -55) || (temperature > 125)) {
     temperature = 23;
-    success = 0;
+    success = 10;
   }
 
   // compose NMEA String
   length = sprintf(sentence, "$POV,T,%+05.4f", temperature); 
 
   // Calculate NMEA checksum and add to string
-  sprintf(sentence + length, "*%02X\n", NMEA_checksum(sentence));
+  sprintf(sentence + length, "*%02X\rn", NMEA_checksum(sentence));
 
   //print sentence for debug
   debug_print("NMEA sentence: %s\n", sentence);

@@ -239,6 +239,63 @@ int NMEA_message_handler(int sock)
 }
 
 /**
+* @brief Timming routine for temperature measurement
+* @param 
+* @return 
+* 
+* Timing handler to coordinate temperature measurement
+* @date 17.04.2014 born
+*
+*/ 
+int temperature_measurement_handler(int sock)
+{
+
+  static int temp_counter = 0, result;
+	char s[70];
+	int sock_err = 0;
+
+	if (temp_sensor.active) {
+	   if (temp_counter==0) {
+	     result=0;
+	     if (OWReset(&temp_sensor)==1) { // Reset
+	       if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
+		 if (OWWriteByte(&temp_sensor,0x44)==1) result=1; // Initiate Conversion 
+	       }
+	     }
+	     temp_counter=1;
+	   } else {
+	     if (temp_counter == temp_sensor.rollover) {
+	       temp_counter=0;
+	       if (result) {
+		 if (OWReset(&temp_sensor)==1) {  // Reset
+		   if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
+		     if (OWWriteByte(&temp_sensor,0xBE)==1) { //Read Scratchpad
+		       OWReadTemperature(&temp_sensor); // Convert output to temperature
+
+		       if (temp_sensor.valid==1) {
+			 
+			 // Compose POV NMEA sentences
+			 result = Compose_Temperature_POV(&s[0], temp_sensor.temperature);
+
+			 // NMEA sentence valid ?? Otherwise print some error !!
+			 if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
+
+			 // Send NMEA string via socket to XCSoar
+			 // send complete sentence including terminating '\0'
+			 if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0) fprintf(stderr, "send failed\n");
+		       }
+			
+		     }
+		   }
+		 }
+	       }
+	     } else temp_counter++;
+	   }
+	}
+	return sock_err;
+}
+  
+/**
 * @brief Timming routine for pressure measurement
 * @param 
 * @return 
@@ -247,41 +304,10 @@ int NMEA_message_handler(int sock)
 * @date 17.04.2014 born
 *
 */ 
-void pressure_measurement_handler(int sock)
+void pressure_measurement_handler()
 {
 	static int meas_counter = 1;
-	static int temp_counter = 0;
-	char s[70];
-	int result;
-	int sock_err = 0;
-	
-	if (temp_sensor.active) {
-	   if (temp_counter==0) {
-	      OWReset(&temp_sensor);// Reset
-	      OWWriteByte(&temp_sensor,0xCC); // Skip ROM
-	      OWWriteByte(&temp_sensor,0x44); // Conversion
-	      temp_counter=1;
-	   } else 
-	   if (temp_counter == temp_sensor.rollover) {
-	     OWReset(&temp_sensor);  // Reset 
-	     OWWriteByte(&temp_sensor,0xCC); // Skip ROM
-	     OWWriteByte(&temp_sensor,0xBE); //Read Scratchpad
-	     OWReadTemperature(&temp_sensor); // Convert output to temperature
-	     temp_counter=0;
-	     if ((temp_sensor.valid==1) && (config.output_POV_T == 1 )) {
-	       // Compose POV slow NMEA sentences
-	       result = Compose_Temperature_POV(&s[0], temp_sensor.temperature);
 
-	       // NMEA sentence valid ?? Otherwise print some error !!
-	       if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
-
-	       // Send NMEA string via socket to XCSoar
-	       // send complete sentence including terminating '\0'
-	       if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0) fprintf(stderr, "send failed\n");
-	     }
-	   } else temp_counter++;
-	} 
-	
 	switch (meas_counter)
 	{
 		case 1:
@@ -583,16 +609,17 @@ int main (int argc, char **argv) {
 			fprintf(stderr, "Open sensor failed !!\n");
 		}
 
-		if (ds2482_open(&temp_sensor,0x18) != 0)
-		{
-		  fprintf(stderr,"DS2482 sensor failed !!\n");
-		} else {
-		  ds2482_reset(&temp_sensor);
-		  if (OWConfigureBits(&temp_sensor)) {
-		     temp_sensor.active=1;
-		     printf ("DS18B20 Temperature Sensor present\n");
-		  } else fprintf (stderr,"DS2482 sensor failed !!\n"); 
-		}		
+		if (config.output_POV_T == 1) {
+		  if (ds2482_open(&temp_sensor,0x18) != 0) 
+		      fprintf(stderr,"DS2482 sensor failed !!\n");
+		    else {
+		    ds2482_reset(&temp_sensor);
+		    if (OWConfigureBits(&temp_sensor)) {
+		      temp_sensor.active=1;
+		      printf ("DS18B20 Temperature Sensor present\n");
+		    } else fprintf (stderr,"DS2482 sensor failed !!\n"); 
+		  }
+		}
 		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
@@ -661,8 +688,9 @@ int main (int argc, char **argv) {
 				printf("usleep error\n");
 				usleep(12500);
 			}
-			pressure_measurement_handler(sock);
+			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
+			if (temperature_measurement_handler(sock)==-1) sock_err=-1;
 			//debug_print("Sock_err: %d\n",sock_err);
 		
 		} // while(1)
