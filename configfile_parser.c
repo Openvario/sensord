@@ -123,10 +123,9 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 				  // get config data for temperature sensor
 				  sscanf(line, "%19s %d", tmp, &temp_sensor->databits);
 				  if ((temp_sensor->databits<9) || (temp_sensor->databits>12)) {
-				    printf ("Temp sensor databits (%d) is not valid, must be in the range of 9-12.  Using default value.\n",temp_sensor->databits);
+				    printf ("Temp sensor databits (%d) is not valid, must be in the range of 9-12.  Using default value of 10 bits.\n",temp_sensor->databits);
 				    temp_sensor->databits=10;
 				  }
-				  printf ("Read in Config data %d\n",temp_sensor->databits);
 				}
 			}
 	

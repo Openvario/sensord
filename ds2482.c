@@ -77,7 +77,7 @@ int ds2482_reset(t_ds2482 *sensor) {
   sensor->owTriplet=4;
   sensor->owLastDevice=0;
   sensor->owLastDiscrepancy=0;
-  sensor->active=0;
+  sensor->present=0;
   sensor->valid=0;
   sensor->temperature=23;
   return 1;
@@ -296,7 +296,7 @@ int OWSearch(t_ds2482 *sensor) {
 
     int deviceAddress4ByteMask = 1;
 
-    sensor->active=0;
+    sensor->present=0;
     if (sensor->owLastDevice) {
         //server.log("OneWire Search Complete");
         sensor->owLastDevice = 0;
@@ -349,7 +349,7 @@ int OWSearch(t_ds2482 *sensor) {
             //server.log(format("OneWire Device Address = %.8X%.8X", owDeviceAddress[1], owDeviceAddress[0]));
             if (OWCheckCRC(sensor)) { 
 	       if ((sensor->owDeviceAddress[0] & 0xff) == 0x28) {
-		  sensor->active=1; return 1; } else {
+		  sensor->present=1; return 1; } else {
                   //server.log("OneWire device address CRC check failed");
                   return 1;
                }
@@ -427,10 +427,10 @@ int OWConfigureBits (t_ds2482 *sensor) {
 	if (OWWriteByte(sensor,0xCC)==-1) return 0;
 	
 	switch (sensor->databits) {
-		case 9  : data[3]=0x1f; sensor->rollover = 8; break;
-		case 10 : data[3]=0x3f; sensor->rollover = 15; break;
-                case 11 : data[3]=0x5f; sensor->rollover = 30; break;
-                default : sensor->rollover = 60; break;
+	case 9  : data[3]=0x1f; sensor->conversion_time = 6; sensor->delta_conversion_time = 5; break;
+	case 10 : data[3]=0x3f; sensor->conversion_time = 13; sensor->delta_conversion_time = 5;  break;
+	case 11 : data[3]=0x5f; sensor->conversion_time = 28; sensor->delta_conversion_time = 5; break;
+	default : sensor->conversion_time = 58; sensor->delta_conversion_time = 5; break; 
 	}
 	for (i=0,j=1;i<4;++i) 
 	   if (OWWriteByte(sensor,data[i])==-1) j=0;	 
@@ -475,7 +475,6 @@ int OWReadTemperature(t_ds2482 *sensor) {
 		       if (sensor->databits!=9) j=2;
     }
 	if ((sensor->temperature<125) && (sensor->temperature>-55)) sensor->valid=1; else j=0;
-	
     //server.log(format("Temperature = %.1f °C", celsius));
     debug_print("%s @ 0x18: temperature %f\n",__func__,sensor->temperature);
     return j;

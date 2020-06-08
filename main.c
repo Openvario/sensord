@@ -250,22 +250,25 @@ int NMEA_message_handler(int sock)
 int temperature_measurement_handler(int sock)
 {
 
-  static int temp_counter = 0, result;
+  static int counter = 0, delta_counter = 0, result;
 	char s[70];
 	int sock_err = 0;
+	int temp;
 
-	if (temp_sensor.active) {
-	   if (temp_counter==0) {
+	if (temp_sensor.present) {
+	   if (counter==0) {
 	     result=0;
 	     if (OWReset(&temp_sensor)==1) { // Reset
 	       if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
-		 if (OWWriteByte(&temp_sensor,0x44)==1) result=1; // Initiate Conversion 
+		 if (OWWriteByte(&temp_sensor,0x44)==1) result=1; // Initiate Conversion
 	       }
 	     }
-	     temp_counter=1;
+	     counter=1;
 	   } else {
-	     if (temp_counter == temp_sensor.rollover) {
-	       temp_counter=0;
+	     if (counter == temp_sensor.conversion_time) {
+	       if (OWReadByte(&temp_sensor)>0) {
+	       counter=0;
+	       delta_counter=0;
 	       if (result) {
 		 if (OWReset(&temp_sensor)==1) {  // Reset
 		   if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
@@ -273,10 +276,9 @@ int temperature_measurement_handler(int sock)
 		       OWReadTemperature(&temp_sensor); // Convert output to temperature
 
 		       if (temp_sensor.valid==1) {
-			 
 			 // Compose POV NMEA sentences
 			 result = Compose_Temperature_POV(&s[0], temp_sensor.temperature);
-
+			 printf ("temp: %f\n",temp_sensor.temperature);
 			 // NMEA sentence valid ?? Otherwise print some error !!
 			 if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
 
@@ -288,8 +290,11 @@ int temperature_measurement_handler(int sock)
 		     }
 		   }
 		 }
-	       }
-	     } else temp_counter++;
+	       } } else {
+	       delta_counter++;
+	       if (delta_counter > temp_sensor.delta_conversion_time)  counter=delta_counter=0;
+	       } 
+	     } else counter++;
 	   }
 	}
 	return sock_err;
@@ -560,7 +565,6 @@ int main (int argc, char **argv) {
 	
 	// print runtime config
 	print_runtime_config();
-	
 	if (io_mode.sensordata_from_file != TRUE)
 	{
 		// we need hardware sensors for running !!
@@ -610,15 +614,16 @@ int main (int argc, char **argv) {
 		}
 
 		if (config.output_POV_T == 1) {
-		  if (ds2482_open(&temp_sensor,0x18) != 0) 
+		  printf ("Config POV T\n");
+		  if (!ds2482_open(&temp_sensor,0x18)) 
 		      fprintf(stderr,"DS2482 sensor failed !!\n");
 		    else {
 		    ds2482_reset(&temp_sensor);
 		    if (OWConfigureBits(&temp_sensor)) {
-		      temp_sensor.active=1;
+		      temp_sensor.present=1;
 		      printf ("DS18B20 Temperature Sensor present\n");
 		    } else fprintf (stderr,"DS2482 sensor failed !!\n"); 
-		  }
+		    }
 		}
 		
 		//initialize differential pressure sensor
@@ -655,7 +660,7 @@ int main (int argc, char **argv) {
 	
 	for(i=0; i < 1000; i++)
 		KalmanFiler1d_update(&vkf, p_static/100, 0.25, 1);
-			
+
 	while(1)
 	{
 		// reset sock_err variables
@@ -679,6 +684,7 @@ int main (int argc, char **argv) {
 				
 		// socket connected
 		// main data acquisition loop
+
 		while(sock_err >= 0)
 		{	int result;
 		
@@ -690,6 +696,7 @@ int main (int argc, char **argv) {
 			}
 			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
+
 			if (temperature_measurement_handler(sock)==-1) sock_err=-1;
 			//debug_print("Sock_err: %d\n",sock_err);
 		
@@ -722,4 +729,5 @@ void print_runtime_config(void)
 	
 }
  
+
 
