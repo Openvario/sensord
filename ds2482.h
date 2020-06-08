@@ -29,9 +29,10 @@ typedef struct {
    int owLastDevice; // should init to 0
    int owLastDiscrepancy; // should init to 0
    float temperature;
-   int active;
+   int present;
    int valid;
-   int rollover;
+  int conversion_time;
+  int delta_conversion_time;
    int databits;
 } t_ds2482;
 
