@@ -103,6 +103,8 @@ int ams5915_measure(t_ams5915 *sensor)
 	//variables
 	uint8_t buf[10]={0x00};
 
+	sensor->prevtime=sensor->curtime;
+	clock_gettime(CLOCK_REALTIME,&sensor->curtime);
 	if (read(sensor->fd, buf, 4) != 4) {								// Read back data into buf[]
 		printf("Unable to read from slave\n");
 		return(1);

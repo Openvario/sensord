@@ -250,6 +250,8 @@ int ms5611_start_pressure(t_ms5611 *sensor)
 	
 	// start conversion for D1
 	buf[0] = 0x48;													// This is the register we want to read from
+	sensor->prevtime=sensor->curtime;
+	clock_gettime(CLOCK_REALTIME,&sensor->curtime);
 	if ((write(sensor->fd, buf, 1)) != 1) {								// Send register we want to read from	
 		printf("Error writing to i2c slave: start conv: adr %x\n",sensor->address);
 		return(1);

@@ -38,6 +38,8 @@ typedef struct {
 	float linearity;
 	float offset;
 	int valid;
+	struct timespec prevtime;
+	struct timespec curtime;
 } t_ams5915;
 
 // prototypes

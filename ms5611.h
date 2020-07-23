@@ -44,6 +44,8 @@ typedef struct {
 	float offset;
 	int valid;
 	int secordcomp;
+	struct timespec prevtime;
+	struct timespec curtime;
 } t_ms5611;
 
 // prototypes
