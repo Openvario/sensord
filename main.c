@@ -45,7 +45,6 @@
 #include "ms5611.h"
 #include "ams5915.h"
 #include "ads1110.h"
-#include "ds2482.h"
 #include "configfile_parser.h"
 #include "vario.h"
 #include "AirDensity.h"
@@ -58,7 +57,7 @@
  
 #define MEASTIMER (SIGRTMAX)
 #define DELTA_TIME_US(T1, T2)	(((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)			
-#define DELTA_TIME(T1, T2)   ((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))
+#define DELTA_TIME(T1, T2)   ((float) (T1.tv_sec-T2.tv_sec)+1.0e-9*(float)(T1.tv_nsec-T2.tv_nsec))
 					
 timer_t  measTimer;
 int g_debug=0;
@@ -69,7 +68,6 @@ t_ms5611 static_sensor;
 t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
 t_ads1110 voltage_sensor;
-t_ds2482 temp_sensor;
 
 // configuration object
 t_config config;
@@ -241,65 +239,6 @@ int NMEA_message_handler(int sock)
 }
 
 /**
-* @brief Timing routine for temperature measurement
-* @param 
-* @return 
-* 
-* Timing handler to coordinate temperature measurement
-* @date 17.04.2014 born
-*
-*/ 
-int temperature_measurement_handler(int sock)
-{
-
-	static int temp_counter = 0,done;
-	char s[70];
-	int sock_err = 0;
-	int result;
-
-	if (temp_sensor.present) {
-		if (temp_counter==0) {
-			if (OWReset(&temp_sensor)==1) { // Reset
-				if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
-					if (OWWriteByte(&temp_sensor,0x44)==1) result=1; // Initiate Conversion
-				}
-			}
-			done=0;
-			temp_counter=1;
-		} else {
-			if (!done) {
-				if (OWReadByte(&temp_sensor)>0) {
-					if (OWReset(&temp_sensor)==1) {  // Reset
-						if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
-							if (OWWriteByte(&temp_sensor,0xBE)==1) { //Read Scratchpad
-								OWReadTemperature(&temp_sensor); // Convert output to temperature
-								if (temp_sensor.valid==1) {
-									done=1;
-									// Compose POV NMEA sentences
-									result=Compose_Temperature_POV(&s[0], temp_sensor.temperature);
-									// printf ("temp: %f\n",temp_sensor.temperature);
-									// NMEA sentence valid ?? Otherwise print some error !!
-									if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
-									// Send NMEA string via socket to XCSoar
-									// send complete sentence including terminating '\0'
-									if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0) fprintf(stderr, "send failed\n");
-								}
-							}			
-						}
-					}
-				}
-			}
-			if (++temp_counter>=temp_sensor.rollover) {
-				if (temp_sensor.valid) temp_counter=0;
-					else if (temp_counter>temp_sensor.maxrollover) temp_counter=0;
-			}
-		 }
-
-	}  	
-	return sock_err;
-}
-
-/**
 * @brief Timing routine for pressure measurement
 * @param 
 * @return 
@@ -465,13 +404,8 @@ int main (int argc, char **argv) {
 	tep_sensor.offset = 0.0;
 	tep_sensor.linearity = 1.0;
 	
-	temp_sensor.rollover = ((int) (round(80/TEMP_SAMPLE_RATE)));
-	temp_sensor.maxrollover = 100;
-	temp_sensor.databits = 10;
-
 	config.output_POV_E = 0;
 	config.output_POV_P_Q = 0;
-	config.output_POV_T = 0;
 	
 	//open file for raw output
 	//fp_rawlog = fopen("raw.log","w");
@@ -481,7 +415,7 @@ int main (int argc, char **argv) {
 	
 	// get config file options
 	if (fp_config != NULL)
-		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &temp_sensor, &config);
+		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &config);
 	
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
@@ -618,21 +552,6 @@ int main (int argc, char **argv) {
 		}
 
 
-		// open temperature sensor and initialize
-		if (config.output_POV_T == 1) {
-			printf ("Opening Temperature Sensor\n");
-			if (!ds2482_open(&temp_sensor,0x18))
-				fprintf (stderr,"DS2482 Sensor failure\n");
-			else {
-				ds2482_reset(&temp_sensor);
-				if (OWConfigureBits(&temp_sensor)) {
-					temp_sensor.present=1;
-					printf ("DS18B20 Temperature Sensor present\n");
-				} else fprintf (stderr,"DS18B20 sensor failed!\n");
-			}
-		}
-
-
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
 		dynamic_sensor.valid = 1;
@@ -658,7 +577,7 @@ int main (int argc, char **argv) {
 	}
 	else
 	{
-		p_static = 101300.0;
+		p_static = 101325.0;
 	}
 	
 	// initialize kalman filter
@@ -705,7 +624,6 @@ int main (int argc, char **argv) {
 			}
 			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
-			if (temperature_measurement_handler(sock)==-1) sock_err=-1;
 			//debug_print("Sock_err: %d\n",sock_err);
 		
 		} // while(1)

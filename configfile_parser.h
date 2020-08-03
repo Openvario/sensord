@@ -25,4 +25,4 @@ typedef struct {
 	float vario_x_accel;
 } t_config;
 
-int cfgfile_parser(FILE *, t_ms5611 *, t_ms5611 *, t_ams5915 *, t_ads1110 *, t_ds2482 *, t_config *);
+int cfgfile_parser(FILE *, t_ms5611 *, t_ms5611 *, t_ams5915 *, t_ads1110 *, t_config *);
