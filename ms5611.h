@@ -34,6 +34,7 @@ typedef struct {
 	uint16_t C6;
 	uint32_t D1;
 	uint32_t D2;
+	uint32_t D2f;
 	int32_t dT;
 	int32_t temp;
 	int64_t off;
@@ -53,7 +54,8 @@ int ms5611_measure(t_ms5611 *);
 int ms5611_calculate(t_ms5611 *);
 int ms5611_open(t_ms5611 *, unsigned char);
 
+int ms5611_calculate_pressure(t_ms5611 *);
 int ms5611_read_pressure(t_ms5611 *);
-int ms5611_read_temp(t_ms5611 *);
+int ms5611_read_temp(t_ms5611 *, int);
 int ms5611_start_temp(t_ms5611 *);
 int ms5611_start_pressure(t_ms5611 *);
