@@ -266,10 +266,15 @@ int ms5611_start_pressure(t_ms5611 *sensor)
 * @date 24.03.2016 revised
 *
 */ 
-int ms5611_read_temp(t_ms5611 *sensor)
+int ms5611_read_temp(t_ms5611 *sensor, int glitch)
 {
 	//variables
 	uint8_t buf[10]={0x00};
+	//variables
+	//long d2;
+	int64_t OFF2=0;
+	int64_t SENS2=0;
+	int64_t T2=0;
 	
 	// read result
 	buf[0] = 0x00;
@@ -285,11 +290,45 @@ int ms5611_read_temp(t_ms5611 *sensor)
 	
 	// Put temperature readings together
 	sensor->D2 = (buf[0] << 16) + (buf[1] << 8) + buf[2];
+	if (glitch==0) 
+	{
+		sensor->D2f = (sensor->D2f*3+sensor->D2)/4;
 
-	// calculate dT and absolute temperature
-	sensor->dT = sensor->D2 - sensor->C5s;
-	sensor->temp = 2000 + (((int64_t)sensor->dT * sensor->C6) / 8388608);
+		// calculate dT and absolute temperature
+		sensor->dT = sensor->D2 - sensor->C5s;
+		sensor->temp = 2000 + (((int64_t)sensor->dT * sensor->C6) / 8388608);
 			
+		// these calculations are copied from the data sheet
+		//OFF = C2 * 2**16 + (C4 * dT) / 2**7
+		//SENS = C1 * 2**15 + (C3 * dT) / 2**8
+		//P = (D1 * SENS / 2**21 - OFF) / 2**15
+
+		sensor->off = (sensor->C2s + (((int64_t)sensor->C4 * sensor->dT) >> 7));
+		sensor->sens = (sensor->C1s + (((int64_t)sensor->C3 * sensor->dT) >> 8));
+
+		if (sensor->secordcomp)
+		{
+			// second order correction
+			if (sensor->temp < 2000)
+			{
+				T2 = (sensor->dT * sensor->dT) >> 31;
+				OFF2 = 5 * ((int64_t)(sensor->temp - 2000) * (sensor->temp - 2000)) >> 1;
+				SENS2 = 5 * ((int64_t)(sensor->temp - 2000) * (sensor->temp - 2000)) >> 2;
+
+				if (sensor->temp < -1500)
+				{
+					OFF2 = OFF2 + 7 * ((int64_t)(sensor->temp + 1500) * (sensor->temp + 1500));
+					SENS2 = SENS2 + ((11 * ((int64_t)(sensor->temp + 1500) * (sensor->temp + 1500))) >> 1);
+				}
+
+				sensor->temp = sensor->temp - T2;
+				sensor->off = sensor->off - OFF2;
+				sensor->sens = sensor->sens - SENS2;
+			}
+		}
+	}
+
+
 	// debug print
 	ddebug_print("%s @ 0x%x: D2 = %u\n", __func__, sensor->address, sensor->D2);
 	ddebug_print("%s @ 0x%x: dT = %d\n", __func__, sensor->address, sensor->dT);
@@ -311,9 +350,6 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	//variables
 	//long d2;
 	uint8_t buf[10]={0x00};
-	int64_t OFF2=0;
-	int64_t SENS2=0;
-	int64_t T2=0;
 	
 	// read result
 	buf[0] = 0x00;
@@ -330,35 +366,11 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	// put pressure reading together
 	sensor->D1 = (buf[0] << 16) + (buf[1] << 8) + buf[2];
 
-	// these calculations are copied from the data sheet
-	//OFF = C2 * 2**16 + (C4 * dT) / 2**7
-	//SENS = C1 * 2**15 + (C3 * dT) / 2**8
-	//P = (D1 * SENS / 2**21 - OFF) / 2**15
-			
-	sensor->off = (sensor->C2s + (((int64_t)sensor->C4 * sensor->dT) >> 7));
-	sensor->sens = (sensor->C1s + (((int64_t)sensor->C3 * sensor->dT) >> 8));
-	
-	if (sensor->secordcomp)
-	{
-		// second order correction
-		if (sensor->temp < 2000)
-		{
-			T2 = (sensor->dT * sensor->dT) >> 31;
-			OFF2 = 5 * ((int64_t)(sensor->temp - 2000) * (sensor->temp - 2000)) >> 1;
-			SENS2 = 5 * ((int64_t)(sensor->temp - 2000) * (sensor->temp - 2000)) >> 2;
-			
-			if (sensor->temp < -1500)
-			{
-				OFF2 = OFF2 + 7 * ((int64_t)(sensor->temp + 1500) * (sensor->temp + 1500));
-				SENS2 = SENS2 + ((11 * ((int64_t)(sensor->temp + 1500) * (sensor->temp + 1500))) >> 1);
-			}
-			
-			sensor->temp = sensor->temp - T2;
-			sensor->off = sensor->off - OFF2;
-			sensor->sens = sensor->sens - SENS2;
-		}	
-	}
-	
+	return 0;
+}
+
+int ms5611_calculate_pressure(t_ms5611 *sensor) 
+{
 	sensor->p_meas = (((sensor->D1 * sensor->sens) >> 21) - sensor->off) >> 15;
 	
 	// check for valid range

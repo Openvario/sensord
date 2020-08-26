@@ -56,7 +56,8 @@
  
 #define MEASTIMER (SIGRTMAX)
 #define DELTA_TIME_US(T1, T2)	(((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)			
-					
+#define DELTA_TIME(T1,T2)       (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec)))
+
 timer_t  measTimer;
 int g_debug=0;
 int g_log=0;
@@ -88,9 +89,29 @@ FILE *fp_sensordata=NULL;
 FILE *fp_datalog=NULL;
 FILE *fp_config=NULL;
 
+struct timespec sensor_cur;
+struct timespec sensor_prev;
+
 //FILE *fp_rawlog=NULL;
 
 enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
+
+float sensor_wait (float time)
+{
+	struct timespec curtime;
+	float deltaTime;
+
+	clock_gettime(CLOCK_REALTIME,&curtime);
+	deltaTime=DELTA_TIME_US(curtime,sensor_prev);
+	if (time-deltaTime>2000) usleep(time-deltaTime);
+	while (deltaTime<time) 
+	{
+		usleep(50);
+		clock_gettime(CLOCK_REALTIME,&curtime);
+		deltaTime=DELTA_TIME_US(curtime,sensor_prev);
+	} 
+	return (deltaTime-time);
+}
 
 //typedef enum { measure_only, record, replay} t_measurement_mode;
 
@@ -146,94 +167,73 @@ int NMEA_message_handler(int sock)
 	int result;
 	char s[256];
 	
-	switch (nmea_counter)
+	if ((nmea_counter++)%4==0)
 	{
-		case 5:
-		case 10:
-		case 15:
-		case 20:
-		case 25:
-		case 30:
-		case 35:
-		case 40:
-			// Compute Vario
-			vario = ComputeVario(vkf.x_abs_, vkf.x_vel_);
-			
-			if (config.output_POV_P_Q == 1)
+		// Compute Vario
+		vario = ComputeVario(vkf.x_abs_, vkf.x_vel_);
+	
+		if (config.output_POV_P_Q == 1)
+		{
+			// Compose POV slow NMEA sentences
+			result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
+			// NMEA sentence valid ?? Otherwise print some error !!
+			if (result != 1)
 			{
-				// Compose POV slow NMEA sentences
-				result = Compose_Pressure_POV_slow(&s[0], p_static/100, p_dynamic*100);
-				
-				// NMEA sentence valid ?? Otherwise print some error !!
-				if (result != 1)
-				{
-					printf("POV slow NMEA Result = %d\n",result);
-				}	
-			
-				// Send NMEA string via socket to XCSoar
-				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
-				{	
-					fprintf(stderr, "send failed\n");
-					break;
-				}
-			}
-			
-			if (config.output_POV_E == 1)
-			{
-				if (tep_sensor.valid != 1)
-				{
-					vario = 99;
-				}
-				// Compose POV slow NMEA sentences
-				result = Compose_Pressure_POV_fast(&s[0], vario);
-				
-				// NMEA sentence valid ?? Otherwise print some error !!
-				if (result != 1)
-				{
-					printf("POV fast NMEA Result = %d\n",result);
-				}	
-				
-				// Send NMEA string via socket to XCSoar
-				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
-				{	
-					fprintf(stderr, "send failed\n");
-					break;
-				}
-			}
-			
-			if (config.output_POV_V == 1 && voltage_sensor.present)
-			{
+				printf("POV slow NMEA Result = %d\n",result);
+			}	
 
-				// Compose POV slow NMEA sentences
-				result = Compose_Voltage_POV(&s[0], voltage_sensor.voltage_converted);
-				
-				// NMEA sentence valid ?? Otherwise print some error !!
-				if (result != 1)
-				{
-					printf("POV voltage NMEA Result = %d\n",result);
-				}	
-				
-				// Send NMEA string via socket to XCSoar
-				if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
-				{	
-					fprintf(stderr, "send failed\n");
-					break;
-				}
+			// Send NMEA string via socket to XCSoar
+			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+			{	
+				fprintf(stderr, "send failed\n");
+				return sock_err;
 			}
-			break;
-		default:
-			sock_err = 0;
-			break;
+		}
+
+		if (config.output_POV_E == 1)
+		{
+			if (tep_sensor.valid != 1)
+			{
+				vario = 99;
+			}
+			// Compose POV slow NMEA sentences
+			result = Compose_Pressure_POV_fast(&s[0], vario);
+			// NMEA sentence valid ?? Otherwise print some error !!
+			if (result != 1)
+			{
+				printf("POV fast NMEA Result = %d\n",result);
+			}	
+
+			// Send NMEA string via socket to XCSoar
+			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+			{	
+				fprintf(stderr, "send failed\n");
+				return sock_err;
+			}
+		}
+
+		if (config.output_POV_V == 1 && voltage_sensor.present)
+		{
+
+			// Compose POV slow NMEA sentences
+			result = Compose_Voltage_POV(&s[0], voltage_sensor.voltage_converted);
+
+			// NMEA sentence valid ?? Otherwise print some error !!
+			if (result != 1)
+			{
+				printf("POV voltage NMEA Result = %d\n",result);
+			}	
+
+			// Send NMEA string via socket to XCSoar
+			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+			{	
+				fprintf(stderr, "send failed\n");
+				return sock_err;
+			}
+		}
 	}
 	
-	// take care for statemachine counter
-	if (nmea_counter == 40)
-			nmea_counter = 1;
-		else
-			nmea_counter++;
-		
 	return(sock_err);
-		
 }
 
 /**
@@ -247,125 +247,123 @@ int NMEA_message_handler(int sock)
 */ 
 void pressure_measurement_handler(void)
 {
-	static int meas_counter = 1;
-	switch (meas_counter)
+	static int meas_counter = 1, glitch = 0;
+	static struct timespec kalman_cur, kalman_prev;
+	float deltaTime;
+	int calcVal;
+
+	// Initialize timers if first time through.
+	if (meas_counter==1) clock_gettime(CLOCK_REALTIME,&kalman_prev);
+
+	// read ADS1110
+	if (voltage_sensor.present && (meas_counter%4==0)) 
 	{
-		case 1:
-		case 5:
-		case 9:
-		case 13:
-		case 17:
-		case 21:
-		case 25:
-		case 29:
-		case 33:
-		case 37:
-			if (io_mode.sensordata_from_file != TRUE)
-			{
-				// start pressure measurement
-				ms5611_start_pressure(&static_sensor);
-				ms5611_start_pressure(&tep_sensor);
-			}
-			break;
+		ads1110_measure(&voltage_sensor);
+		ads1110_calculate(&voltage_sensor);
+	}
+
+	if (io_mode.sensordata_from_file != TRUE) 
+	{
+		// read AMS5915
+		ams5915_measure(&dynamic_sensor);
+
+		// if early, wait
+
+                // if more than 2ms late, increase the glitch counter
 		
-		case 2:
-		case 6:
-		case 10:
-		case 14:
-		case 18:
-		case 22:
-		case 26:
-		case 30:
-		case 34:
-		case 38:
-			if (io_mode.sensordata_from_file != TRUE)
+		if ((deltaTime=sensor_wait(12500))>2000) glitch += 4 + ((int) (deltaTime))/5000;
+		if (meas_counter&1) {
+			// read pressure sensors
+			ms5611_read_temp(&tep_sensor,glitch);
+			ms5611_read_pressure(&static_sensor);
+			ms5611_start_temp(&static_sensor);
+			clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			ms5611_start_pressure(&tep_sensor);
+
+			// if there was a glitch, compensate for the glitch
+			if (glitch) 
 			{
-				// read pressure values
-				ms5611_read_pressure(&static_sensor);
-				ms5611_read_pressure(&tep_sensor);
-							
-				// read AMS5915
-				ams5915_measure(&dynamic_sensor);
-				ams5915_calculate(&dynamic_sensor);
-				
-				// read ADS1110
-				if(voltage_sensor.present)
-				{
-					ads1110_measure(&voltage_sensor);
-					ads1110_calculate(&voltage_sensor);
+				// decrement glitch counter, but don't go down to zero unless glitch is over
+				if ((tep_sensor.D2>(tep_sensor.D2f-15)) && (glitch==1)) glitch=0; 
+				else { 
+					if ((--glitch)==0) glitch=1; 
 				}
+				// compensate for the glitch
+				calcVal=((tep_sensor.D2-tep_sensor.D2f)*30);
+				static_sensor.D1+=(calcVal/101);
 			}
-			else
+			ms5611_calculate_pressure(&static_sensor);
+		} else {
+			// read pressure sensors
+			ms5611_read_pressure(&tep_sensor);
+			ms5611_read_temp(&static_sensor,glitch);
+			ms5611_start_temp(&tep_sensor);
+			clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			ms5611_start_pressure(&static_sensor);
+
+			// if there was a glitch, compensate for the glitch
+			if (glitch) 
 			{
-				if (fscanf(fp_sensordata, "%f,%f,%f", &tep_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF)
-				{
-					printf("End of File reached\n");
-					printf("Exiting ...\n");
-					exit(EXIT_SUCCESS);
-				}
+				// decrement glitch counter, but down go down to zero unless glitch is over
+				if ((static_sensor.D2>(static_sensor.D2f-15)) && (glitch==1)) glitch=0; 
+				else { 
+					if ((--glitch)==0) glitch=1; 
+				} 
+
+				// compensate for the glitch
+				calcVal=((static_sensor.D2-static_sensor.D2f)*30);
+				tep_sensor.D1+=(calcVal/101);
 			}
-			
-			//
-			// filtering
-			//
+			ms5611_calculate_pressure(&tep_sensor);
+		}
+		ams5915_calculate(&dynamic_sensor);
+	} else {
+
+		// read from sensor data from file if desired
+		if (fscanf(fp_sensordata, "%f,%f,%f", &tep_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF) 
+		{
+			printf("End of File reached\n");
+			printf("Exiting ...\n");
+			exit(EXIT_SUCCESS);
+		}
+	}
+	// filtering 
+	//
+	// of dynamic pressure
+	p_dynamic = (15*p_dynamic + dynamic_sensor.p) / 16;
+	//printf("Pdyn: %f\n",p_dynamic*100);
+	// mask speeds < 10km/h
+	if (p_dynamic < 0.04)
+	{
+		p_dynamic = 0.0;
+	}
+
+	if (glitch<2) 
+	{
+		if (meas_counter&1) {
 			// of static pressure
-			p_static = (3*p_static + static_sensor.p) / 4;
-			
+			p_static = (7*p_static + static_sensor.p) / 8;
+		}	
+		else {
 			// check tep_pressure input value for validity
 			if ((tep_sensor.p/100 < 100) || (tep_sensor.p/100 > 1200))
 			{
-				// tep pressure out of range
+ 				// tep pressure out of range
 				tep_sensor.valid = 0;
-			}
-			else
-			{
+			} else {
+
 				// of tep pressure
-				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, 0.05);
+				tep_sensor.valid=1;
+				clock_gettime(CLOCK_REALTIME,&kalman_cur);
+				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, DELTA_TIME(kalman_cur,kalman_prev));
+				kalman_prev=kalman_cur;
 			}
-			
-			// of dynamic pressure
-			p_dynamic = (3*p_dynamic + dynamic_sensor.p) / 4;
-			//printf("Pdyn: %f\n",p_dynamic*100);
-			// mask speeds < 10km/h
-			if (p_dynamic < 0.04)
-			{
-				p_dynamic = 0.0;
+			if (io_mode.sensordata_to_file == TRUE) {
+				fprintf(fp_datalog, "%f,%f,%f\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p);
 			}
-				
-			// write pressure to file if option is set
-			if (io_mode.sensordata_to_file == TRUE)
-			{
-				fprintf(fp_datalog, "%f,%f,%f\n",  tep_sensor.p/100, static_sensor.p/100, dynamic_sensor.p);
-			}
-			
-			// datalog
-			//fprintf(fp_rawlog,"%f,%f,%f\n",tep_sensor.p/100, vkf.x_abs_, vkf.x_vel_);
-			
-			break;
-		case 3:
-			// start temp measurement
-			ms5611_start_temp(&static_sensor);
-			ms5611_start_temp(&tep_sensor);
-			break;
-		case 4:
-			// read temp values
-			ms5611_read_temp(&static_sensor);
-			ms5611_read_temp(&tep_sensor);
-			break;
-		default:
-			break;
+		}
 	}
-	
-	// take care for statemachine counter
-	if (meas_counter == 40)
-	{
-		meas_counter = 1;
-		ddebug_print("%s: start new cycle\n", __func__);
-	}
-	else
-	{
-		meas_counter++;
-	}
+	meas_counter++;
 }
 	
 int main (int argc, char **argv) {
@@ -459,7 +457,8 @@ int main (int argc, char **argv) {
 				
 		/* Try to create our own process group */
 		sid = setsid();
-		if (sid < 0) {
+		if (sid < 0) 
+		{
 			syslog(LOG_ERR, "Could not create process group\n");
 			exit(EXIT_FAILURE);
 		}
@@ -487,7 +486,7 @@ int main (int argc, char **argv) {
 	}
 	else
 	{
-		if( eeprom_read_data(&eeprom, &data) == 0)
+		if (eeprom_read_data(&eeprom, &data) == 0)
 		{
 			fprintf(fp_console,"Using EEPROM calibration values ...\n");
 			dynamic_sensor.offset = data.zero_offset;
@@ -508,7 +507,7 @@ int main (int argc, char **argv) {
 		/// @todo remove hardcoded i2c address static pressure
 		if (ms5611_open(&static_sensor, 0x76) != 0)
 		{
-			fprintf(stderr, "Open sensor failed !!\n");
+			fprintf(stderr, "Open static sensor failed !!\n");
 			return 1;
 		}
 		
@@ -523,7 +522,7 @@ int main (int argc, char **argv) {
 		/// @todo remove hardcoded i2c address for velocity pressure
 		if (ms5611_open(&tep_sensor, 0x77) != 0)
 		{
-			fprintf(stderr, "Open sensor failed !!\n");
+			fprintf(stderr, "Open tep sensor failed !!\n");
 			return 1;
 		}
 		
@@ -538,52 +537,76 @@ int main (int argc, char **argv) {
 		/// @todo remove hardcoded i2c address for differential pressure
 		if (ams5915_open(&dynamic_sensor, 0x28) != 0)
 		{
-			fprintf(stderr, "Open sensor failed !!\n");
+			fprintf(stderr, "Open dynamic sensor failed !!\n");
 			return 1;
-		}
+		} 
 		
 		// open sensor for battery voltage
 		/// @todo remove hardcoded i2c address for voltage sensor
 		if (ads1110_open(&voltage_sensor, 0x48) != 0)
 		{
-			fprintf(stderr, "Open sensor failed !!\n");
+			fprintf(stderr, "Open voltage sensor failed !!\n");
 		}
 		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
 		dynamic_sensor.valid = 1;
-		
+
 		//initialize voltage sensor
-		if(voltage_sensor.present)
-			ads1110_init(&voltage_sensor);
-		
+		// if(voltage_sensor.present)
+		ads1110_init(&voltage_sensor);
+                
 		// poll sensors for offset compensation
-		ms5611_start_temp(&static_sensor);
-		usleep(10000);
-		ms5611_read_temp(&static_sensor);
+		tep_sensor.D2f=static_sensor.D2f=0;
+		for (i=0;i<120;++i)
+		{
+			ms5611_start_temp(&static_sensor);
+			ms5611_start_temp(&tep_sensor);
+			if (i==0) clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			sensor_wait(12500);
+			clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			ms5611_read_temp(&static_sensor,0);
+			ms5611_read_temp(&tep_sensor,0);
+                }
+
 		ms5611_start_pressure(&static_sensor);
-		usleep(10000);
-		ms5611_read_pressure(&static_sensor);
-	
 		ms5611_start_temp(&tep_sensor);
-		usleep(10000);
-		ms5611_read_temp(&tep_sensor);
+		sensor_wait(12500);
+		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+
+		ms5611_read_pressure(&static_sensor);
+		ms5611_read_temp(&tep_sensor,0);
+		ms5611_start_pressure(&tep_sensor);
+		ms5611_start_temp(&static_sensor);
+		sensor_wait(12500);
+		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+
+		ms5611_read_pressure(&tep_sensor);
+		ms5611_read_temp(&static_sensor,0);
+		ms5611_calculate_pressure(&tep_sensor);
+		ms5611_calculate_pressure(&static_sensor);
+		ms5611_start_temp(&tep_sensor);
+		ms5611_start_pressure(&static_sensor);
+
+		ams5915_measure(&dynamic_sensor);
+		ams5915_calculate(&dynamic_sensor);
 
 		// initialize variables
 		p_static = static_sensor.p;
+		p_dynamic = dynamic_sensor.p;
 	}
 	else
 	{
-		p_static = 101300.0;
+		p_static = 101325.0;
+		p_dynamic = 0;
 	}
-	
+
 	// initialize kalman filter
 	KalmanFilter1d_reset(&vkf);
 	vkf.var_x_accel_ = config.vario_x_accel;
-	
+
 	for(i=0; i < 1000; i++)
-		KalmanFiler1d_update(&vkf, p_static/100, 0.25, 1);
-			
+		KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, 25e-3);
 	while(1)
 	{
 		// reset sock_err variables
@@ -599,7 +622,8 @@ int main (int argc, char **argv) {
 		server.sin_port = htons(4353);
 		
 		// try to connect to XCSoar
-		while (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
+		while (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) 
+		{
 			fprintf(stderr, "failed to connect, trying again\n");
 			fflush(stdout);
 			sleep(1);
@@ -608,25 +632,18 @@ int main (int argc, char **argv) {
 		// socket connected
 		// main data acquisition loop
 		while(sock_err >= 0)
-		{	int result;
-		
-			result = usleep(12500);
-			if (result != 0)
-			{
-				printf("usleep error\n");
-				usleep(12500);
-			}
+		{	
 			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
 			//debug_print("Sock_err: %d\n",sock_err);
 		
-		} // while(1)
+		} 
 		
 		// connection dropped
 		close(sock);
 	}
 	return 0;
-}	
+}
 
 void print_runtime_config(void)
 {
