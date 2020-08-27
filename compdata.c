@@ -328,6 +328,8 @@ int main (int argc, char **argv) {
 		if (i%200==101) usleep ((rand()%30)*10e3+50e3);
 		pressure_measurement_handler(1);
 	}
+	fprintf (fp_stat,"%d %d %d %d %d %d\n",static_sensor.C1s,static_sensor.C2s,static_sensor.C3, static_sensor.C4, static_sensor.C5s, static_sensor.C6);
+	fprintf (fp_tep, "%d %d %d %d %d %d\n",tep_sensor.C1s,tep_sensor.C2s,tep_sensor.C3,tep_sensor.C4,tep_sensor.C5s,tep_sensor.C6); 	
 	for (i=0;i<sidx;++i) 
 		fprintf (fp_stat,"%d %d %d %d %d %d %d %d\n",statval[i][0],statval[i][1],statval[i][2],statval[i][3],statval[i][4],statval[i][5],statval[i][6],statval[i][7]);
 	for (i=0;i<tidx;++i)
