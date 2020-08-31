@@ -33,6 +33,7 @@ typedef struct {
 	uint32_t C5s;
 	uint16_t C6;
 	uint32_t D1;
+	uint32_t D1f;
 	uint32_t D2;
 	uint32_t D2f;
 	int32_t dT;
