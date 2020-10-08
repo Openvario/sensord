@@ -470,6 +470,7 @@ int main (int argc, char **argv) {
 		
 		//open file for log output
 		fp_console = fopen("sensord.log","w+");
+		stdout = fp_console;
 		stderr = fp_console;
 		setbuf(fp_console, NULL);
 	}
