@@ -26,6 +26,7 @@
 #include "def.h"
 
 
+extern char config_filename[50];
 extern int g_debug;
 extern int g_log;
 
@@ -43,7 +44,6 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 	int c;
 	char datalog_filename[50];
 	char sensordata_filename[50];
-	char config_filename[50];
 	
 	const char* Usage = "\n"\
     "  -v              print version information\n"\

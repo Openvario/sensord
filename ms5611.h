@@ -34,13 +34,18 @@ typedef struct {
 	uint16_t C6;
 	uint32_t D1;
 	uint32_t D1f;
+	uint32_t D1l;
 	uint32_t D2;
+	uint32_t D2l;
 	uint32_t D2f;
 	int32_t dT;
 	int32_t temp;
 	int64_t off;
 	int64_t sens;
 	int32_t p_meas;
+	double comp2;
+	double comp1;
+	double comp0;
 	float p;
 	float linearity;
 	float offset;
