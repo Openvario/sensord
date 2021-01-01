@@ -43,6 +43,9 @@ typedef struct {
 	int64_t off;
 	int64_t sens;
 	int32_t p_meas;
+	double Pcomp2;
+	double Pcomp1;
+	double Pcomp0;
 	double comp2;
 	double comp1;
 	double comp0;

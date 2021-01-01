@@ -68,8 +68,8 @@ int g_debug=0;
 int g_log=0;
 int sidx=0;
 int tidx=0;
-int statval[1048576][5];
-int tepval[1048576][5];
+double statval[1048576][3];
+double tepval[1048576][3];
 int glitch=0;
 int noglitch=0;
 int idx=0;
@@ -82,16 +82,15 @@ float p_static;
 
 int g_foreground=FALSE;
 int g_secordcomp=FALSE;
+int tj=FALSE;
 
 char config_filename[50];
 FILE *fp_console=NULL;
 FILE *fp_sensordata=NULL;
 FILE *fp_config=NULL;
 FILE *fp_datalog=NULL;
-FILE *fp_stat=NULL;
-FILE *fp_tep=NULL;
-FILE *fp1=NULL;
-FILE *fp2=NULL;
+//FILE *fp1=NULL;
+//FILE *fp2=NULL;
 
 struct timespec sensor_cur;
 struct timespec sensor_prev;
@@ -160,10 +159,8 @@ void sigintHandler(int sig_num){
 void pressure_measurement_handler(int record)
 {
 	static unsigned int meas_counter=1, glitchstart=0,shutdown=0,deltaxmax=0;
-	int x, deltax;
-	float deltaTime;
-
-	x=0;
+	int x=0, deltax;
+	double deltaTime, comp;
 
 	// if early, wait
 	// if more than 2ms late, increase the glitch counter
@@ -201,15 +198,18 @@ void pressure_measurement_handler(int record)
 					++orun;
 				}
 				if (tep_sensor.D2>(int)round(tep_sensor.D2f-15)) glitch=0;
-				if (glitch && record) {
-					statval[sidx][0]=static_sensor.D1f;
-					statval[sidx][1]=static_sensor.D1;
-					statval[sidx][2]=(int)round(tep_sensor.D2f);
-					statval[sidx][3]=tep_sensor.D2;
-					statval[sidx++][4]=x;
+				if (glitch && record && ((int)round(tep_sensor.D2f)>tep_sensor.D2+500)) {
+					comp=static_sensor.p*1e-5;
+					comp=comp*comp*static_sensor.Pcomp2+comp*static_sensor.Pcomp1+static_sensor.Pcomp0;
+					statval[sidx][0]=((double)static_sensor.D1f-(double)static_sensor.D1)/comp;
+					statval[sidx][1]=((double)tep_sensor.D2f-(double)tep_sensor.D2);
+					statval[sidx++][2]=x;
 				}
-			} else static_sensor.D1f=(static_sensor.D1f*7+static_sensor.D1)>>3;
-		} 
+			} else {
+				static_sensor.D1f=(static_sensor.D1f*7+static_sensor.D1)>>3;
+				ms5611_calculate_pressure(&static_sensor);
+			}
+		}	 
 	} else {
 		// read pressure sensors
 		x|=ms5611_read_pressure(&tep_sensor);
@@ -243,39 +243,45 @@ void pressure_measurement_handler(int record)
 					++orun;
 				}
 				if (static_sensor.D2>(int)round(static_sensor.D2f-15)) glitch=0;
-				if (glitch && record) {
-					tepval[tidx][0]=tep_sensor.D1f;
-					tepval[tidx][1]=tep_sensor.D1;
-					tepval[tidx][2]=(int)round(static_sensor.D2f);
-					tepval[tidx][3]=static_sensor.D2;
-					tepval[tidx++][4]=x;
+				if (glitch && record && ((int)round(static_sensor.D2f)>static_sensor.D2+500)) {
+					comp=tep_sensor.p*1e-5;
+					comp=comp*comp*tep_sensor.Pcomp2+comp*tep_sensor.Pcomp1+tep_sensor.Pcomp0;
+					tepval[tidx][0]=((double)tep_sensor.D1f-(double)tep_sensor.D1)/comp;
+					tepval[tidx][1]=((double)static_sensor.D2f-(double)static_sensor.D2);
+					tepval[tidx++][2]=x;
+
 				}
-			} else tep_sensor.D1f=(tep_sensor.D1f*7+tep_sensor.D1)>>3;
+			} else {
+				tep_sensor.D1f=(tep_sensor.D1f*7+tep_sensor.D1)>>3;
+				ms5611_calculate_pressure(&tep_sensor);
+			}
 		}
 	}
 	if (glitch) noglitch=0; else noglitch++;
 	meas_counter++;
+	if (io_mode.sensordata_to_file == TRUE) {
+		if ((meas_counter%2==1) && (record))
+			fprintf(fp_datalog, "%.4f %.4f %f %d %d %d %d %d %d %d %d %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
+	}
 }
 
-void polyfit (int val[][5], int idx, double pf[], double rmserr[])
+void polyfit (double val[][3], int idx, double pf[], double rmserr[])
 {
-	int i,j;
-	double  x[4], y[3], tmp, xval, yval, inv[3][3];
+	int i;
+	double  x[4], y[3], tmp, inv[3][3];
 	double det,cor,meanval,det2;
 
 	for (i=0;i<3;++i) x[i]=y[i]=0;
 	x[3]=0;
 	for (i=0;i<idx;++i) {
-		xval=val[i][2]-val[i][3];
-		yval=val[i][0]-val[i][1];
-		x[0]+=xval;
-		y[0]+=yval;
-		tmp=xval*xval;
+		x[0]+=val[i][1];
+		y[0]+=val[i][0];
+		tmp=val[i][1]*val[i][1];
 		x[1]+=tmp;
-		x[2]+=tmp*xval;
+		x[2]+=tmp*val[i][1];
 		x[3]+=tmp*tmp;
-		y[1]+=yval*xval;
-		y[2]+=yval*tmp;
+		y[1]+=val[i][0]*val[i][1];
+		y[2]+=val[i][0]*tmp;
         }
 	det=x[3]*(x[1]*idx-x[0]*x[0])-x[2]*(x[2]*idx-x[0]*x[1])+x[1]*(x[2]*x[0]-x[1]*x[1]);
 	inv[0][0]=x[1]*idx-x[0]*x[0];
@@ -291,15 +297,13 @@ void polyfit (int val[][5], int idx, double pf[], double rmserr[])
 	for (i=0;i<3;++i)
 		pf[i]=(inv[i][0]*y[2]+inv[i][1]*y[1]+inv[i][2]*y[0])*det;
 	for (i=0,meanval=det=0;i<idx;++i) {
-		j=val[i][2]-val[i][3];
-		cor=val[i][1]-val[i][0]+(j*j*pf[0]+j*pf[1]+pf[2]);
+		cor=(val[i][1]*val[i][1]*pf[0]+val[i][1]*pf[1]+pf[2])-val[i][0];
 		meanval+=cor;
 		det+=cor*cor;
 	}
 	meanval=meanval/(double)idx;
 	for (i=0,det2=0;i<idx;++i) {
-		j=val[i][2]-val[i][3];
-		cor=val[i][1]-val[i][0]+(j*j*pf[0]+j*pf[1]+pf[2]);
+		cor=(val[i][1]*val[i][1]*pf[0]+val[i][1]*pf[1]+pf[2])-val[i][0];
 		det2+=(cor-meanval)*(cor-meanval);
 	}
 	rmserr[0]=meanval;
@@ -311,7 +315,6 @@ int main (int argc, char **argv) {
 	
 	// local variables
 	int iter=300,ch,pos=0,oldpos=0,i=0;
-//	int j=0;
 	double pf[2][3], rmserr[2][3];
 	char valstr[5]={'0','3','0','0',0};
 	char goodbadstr[2][21] = {{0x1b,'[','3','2','m','G','O','O','D',0x1b,'[','0','m',0},{0x1b,'[','3','1','m','B','A','D',0x1b,'[','0','m',0,0}};
@@ -324,10 +327,13 @@ int main (int argc, char **argv) {
 	// initialize variables
 	static_sensor.offset = 0.0;
 	static_sensor.linearity = 1.0;
-	
+
 	tep_sensor.offset = 0.0;
 	tep_sensor.linearity = 1.0;
-	
+	tep_sensor.Pcomp2 = static_sensor.Pcomp2 = -0.0000004638;
+	tep_sensor.Pcomp1 = static_sensor.Pcomp1 =  0.9514328801;
+	tep_sensor.Pcomp0 = static_sensor.Pcomp0 =  0.1658634996;
+
 	//open file for raw output
 	//fp_rawlog = fopen("raw.log","w");
 		
@@ -361,9 +367,10 @@ int main (int argc, char **argv) {
 	// open sensor for static pressure
 	/// @todo remove hardcoded i2c address static pressure
 
-	struct termios tio;
+	struct termios tio, tio2;
 
 	tcgetattr( 0, &tio );
+	tcgetattr( 0, &tio2 );
 	tio.c_lflag &= (~ICANON & ~ECHO);
 	tcsetattr( 0, TCSANOW, &tio );
 
@@ -477,14 +484,13 @@ int main (int argc, char **argv) {
 	ms5611_calculate_pressure(&static_sensor);
 	ms5611_start_temp(&tep_sensor);
 	ms5611_start_pressure(&static_sensor);
-	fp_stat = fopen ("statdat","a+");
-	fp_tep = fopen ("tepdat","a+");
 	for (i=0;i<1000;++i) 
 		pressure_measurement_handler(0);
 	// main data acquisition loop
+
 	for (i=0;sidx<iter;) 
 	{
-		if (noglitch>29) usleep ((rand()%30)*10e3+50e3);
+		if (noglitch>29) usleep (250e3);
 		pressure_measurement_handler(1);
 		if ((sidx%1000)==0) { 
 			if (i==0) { 
@@ -493,10 +499,10 @@ int main (int argc, char **argv) {
 			}
 		} else i=0;
 	}
-	fclose (fp_stat);
-	fclose (fp_tep);
+	if (fp_datalog!=NULL) fclose(fp_datalog);
 	if (fp_config!=NULL) fclose(fp_config);
 	fp_config  = fopen (config_filename,"a+");
+
 	polyfit (statval, sidx, &pf[0][0],&rmserr[0][0]);
 	polyfit (tepval, tidx, &pf[1][0],&rmserr[1][0]);
 	pos=0;
@@ -518,7 +524,7 @@ int main (int argc, char **argv) {
 	if (i) printf ("%s\tGlitches (zero is ideal), Underrun: %s%d%s, Overrun: %s%d%s\n",goodbadstr[1],colors[(i>>1)&1],urun,colors[0],colors[(i>>2)&1],orun,colors[0]); 
 	else printf ("%s\tNo overruns/underruns errors found during glitches.\n",goodbadstr[0]);
 	pos|=i;
-	printf ("tek_comp %.10lf %.10lf %.10lf\nstatic_comp %.10lf %.10lf %.10lf\n",pf[0][0],pf[0][1],pf[0][2],pf[1][0],pf[1][1],pf[1][2]);
+	printf ("static_comp %.10lf %.10lf %.10lf\ntek_comp %.10lf %.10lf %.10lf\n",pf[0][0],pf[0][1],pf[0][2],pf[1][0],pf[1][1],pf[1][2]);
 	printf ("Empirical testing seems to show: \n");
 	if ((2.5e-6<pf[0][0]) || (pf[0][0]<-2.5e-6)) i=3; else i=0;
 	if ((2.5e-6<pf[1][0]) || (pf[1][0]<-2.5e-6)) i|=5;
@@ -528,7 +534,7 @@ int main (int argc, char **argv) {
 	if ((-.28<pf[1][1]) || (pf[1][1]<-0.35)) i|=5;
 	printf ("%s\t-0.28 > linear term (%s%6.5f%s and %s%6.5f%s) > -0.35\n",goodbadstr[i&1],colors[(i>>1)&1],pf[0][1],colors[0],colors[(i>>2)&1],pf[1][1],colors[0]);
 	pos|=i;
-	if ((0<pf[0][1]) || (pf[0][2]<-10)) i=3; else i=0;
+	if ((0<pf[0][2]) || (pf[0][2]<-10)) i=3; else i=0;
 	if ((0<pf[1][2]) || (pf[1][2]<-10)) i|=5;
 	printf ("%s\t0 > constant term (%s%6.5f%s and %s%6.5f%s) > -10\n",goodbadstr[i&1],colors[(i>>1)&1],pf[0][2],colors[0],colors[(i>>2)&1],pf[1][2],colors[0]);
 	pos=(pos|i)&1;
@@ -562,7 +568,7 @@ int main (int argc, char **argv) {
 
 		if (pos==0) {
 			printf ("Saving...\n");	
-			fprintf(fp_config,"\ntek_comp %.10lf %.10lf %.10lf\nstatic_comp %.10lf %.10lf %.10lf\n",pf[0][0],pf[0][1],pf[0][2],pf[1][0],pf[1][1],pf[1][2]);
+			fprintf(fp_config,"\nstatic_comp %.10lf %.10lf %.10lf\ntek_comp %.10lf %.10lf %.10lf\n",pf[0][0],pf[0][1],pf[0][2],pf[1][0],pf[1][1],pf[1][2]);
 		}
 		fclose (fp_config);
 	}

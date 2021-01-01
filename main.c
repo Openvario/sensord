@@ -81,6 +81,7 @@ float p_dynamic;
 
 int g_foreground=FALSE;
 int g_secordcomp=FALSE;
+int tj=FALSE;
 
 t_io_mode io_mode;
 
@@ -263,8 +264,7 @@ void pressure_measurement_handler(void)
 	static struct timespec kalman_cur, kalman_prev;
 	float deltaTime;
 	int deltax,reject=0;
-	double correction;
-	static int test1,test2;
+	double correction, cor2;
 
 	// Initialize timers if first time through.
 	if (meas_counter==1) clock_gettime(CLOCK_REALTIME,&kalman_prev);
@@ -322,13 +322,14 @@ void pressure_measurement_handler(void)
 				if (!glitchstart)
 					if (abs(deltax)<15) glitch=0;
 				correction = deltax*deltax*static_sensor.comp2+deltax*static_sensor.comp1+static_sensor.comp0;
+				cor2=static_sensor.p*1e-5;
+				correction *= (cor2*cor2*static_sensor.Pcomp2+cor2*static_sensor.Pcomp1+static_sensor.Pcomp0);
 				static_sensor.D1+=(int) round(correction);
-				test1=static_sensor.D1-static_sensor.D1f;
 			} else {
-				shutoff=0;
 				static_sensor.D1f=(static_sensor.D1f*7+static_sensor.D1)/8;
+				shutoff=0;
 			}
-			ms5611_calculate_pressure(&static_sensor);			
+			ms5611_calculate_pressure(&static_sensor);
 		} else {
 			// read pressure sensors
 			ms5611_read_pressure(&tep_sensor);
@@ -361,10 +362,9 @@ void pressure_measurement_handler(void)
 				if (!glitchstart)
 					if (abs(deltax)<15) glitch=0;
 				correction = deltax*deltax*tep_sensor.comp2+deltax*tep_sensor.comp1+tep_sensor.comp0;
+				cor2=tep_sensor.p*1e-5;
+				correction *= (cor2*cor2*tep_sensor.Pcomp2+cor2*tep_sensor.Pcomp1+tep_sensor.Pcomp0);
 				tep_sensor.D1+=(int) round(correction);
-				test2=tep_sensor.D1-tep_sensor.D1f;
-				if (io_mode.sensordata_to_file == TRUE)
-					fprintf (fp_datalog,"%d %d\n",test1,test2);
 			} else {
 				tep_sensor.D1f = (tep_sensor.D1f*7+tep_sensor.D1)/8;
 				shutoff=0;
@@ -412,7 +412,9 @@ void pressure_measurement_handler(void)
 				kalman_prev=kalman_cur;
 			}
 			if (io_mode.sensordata_to_file == TRUE) {
-				fprintf(fp_datalog, "%.4f,%.4f,%f\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p);
+				if (tj) 
+					fprintf(fp_datalog, "%.4f %.4f %f %d %d %d %d %d %d %d %d %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
+				else fprintf(fp_datalog, "%.4f,%.4f,%.4f\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p);
 			}
 		}
 	}
@@ -422,10 +424,9 @@ void pressure_measurement_handler(void)
 int main (int argc, char **argv) {
 	
 	// local variables
-	int i=0;
+	int i = 0,j = 0;
 	int result;
 	int sock_err = 0;
-	int j=0;
 
 	t_24c16 eeprom;
 	t_eeprom_data data;
@@ -447,19 +448,22 @@ int main (int argc, char **argv) {
 	// initialize variables
 	static_sensor.offset = 0.0;
 	static_sensor.linearity = 1.0;
-	static_sensor.comp2 = -0.0000003;
-	static_sensor.comp1 = -0.3;
-	static_sensor.comp0 = -5;
-
+	static_sensor.comp2 = -0.0000004875;
+	static_sensor.comp1 = -0.2670286916;
+	static_sensor.comp0 = -18.7077108239;
+	static_sensor.Pcomp2 = 15365;
 
 	dynamic_sensor.offset = 0.0;
 	dynamic_sensor.linearity = 1.0;
 	
 	tep_sensor.offset = 0.0;
 	tep_sensor.linearity = 1.0;
-	tep_sensor.comp2 = -0.0000003;
-	tep_sensor.comp1 = -0.3;
-	tep_sensor.comp0 = -5;
+	tep_sensor.comp2 = -0.0000015538;
+	tep_sensor.comp1 = -0.2489404356;
+	tep_sensor.comp0 = -27.3219042156;
+	tep_sensor.Pcomp2 = static_sensor.Pcomp2 = -0.0000004638;
+	tep_sensor.Pcomp1 = static_sensor.Pcomp1 =  0.9514328801;
+	tep_sensor.Pcomp0 = static_sensor.Pcomp0 =  0.1658634996;
 	
 	config.output_POV_E = 0;
 	config.output_POV_P_Q = 0;
@@ -697,7 +701,10 @@ int main (int argc, char **argv) {
 		// main data acquisition loop
 		while(sock_err >= 0)
 		{
-		//	if ((++j)%1023==0) usleep ((rand()%30)*10e3+50e3);	
+			if (tj)
+			{	
+				if ((++j)%1023==100) usleep (250e3);
+			}
 			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
 			//debug_print("Sock_err: %d\n",sock_err);

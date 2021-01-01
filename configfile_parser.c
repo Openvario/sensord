@@ -88,6 +88,12 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->comp2, &static_sensor->comp1, &static_sensor->comp0);
 				}
 				
+				if (strcmp(tmp,"static_Pcomp") == 0)
+				{
+                                        // get compensation data for static sensor
+                                        sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->Pcomp2, &static_sensor->Pcomp1, &static_sensor->Pcomp0);
+                                }
+
 				// check for tek_sensor
 				if (strcmp(tmp,"tek_sensor") == 0)
 				{
@@ -101,6 +107,12 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					// get compensation data for tek sensor
 					sscanf (line, "%19s %lf %lf %lf",tmp, &tek_sensor->comp2, &tek_sensor->comp1, &tek_sensor->comp0);
 				}
+
+                                if (strcmp(tmp,"tek_Pcomp") == 0)
+                                {
+                                        // get compensation data for tek sensor
+                                        sscanf(line, "%19s %lf %lf %lf",tmp, &tek_sensor->Pcomp2, &tek_sensor->Pcomp1, &tek_sensor->Pcomp0);
+                                }
 
 				// check for dynamic_sensor
 				if (strcmp(tmp,"dynamic_sensor") == 0)
