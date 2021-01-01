@@ -374,7 +374,7 @@ int main (int argc, char **argv) {
 	tio.c_lflag &= (~ICANON & ~ECHO);
 	tcsetattr( 0, TCSANOW, &tio );
 
-	printf ("This program calculates compenation data to compensate for timing glitches on the static and tek sensors.\nThe pressure sensors are sensitive to air movement.\nFor best results, ensure the air is as still as possible when taking measurements.\nHow many thousand data points? %s\033[4D",valstr);
+	printf ("This program calculates compensation data to compensate for timing glitches on the static and tek sensors.\nThe pressure sensors are sensitive to air movement.\nFor best results, ensure the air is as still as possible when taking measurements.\nHow many thousand data points? %s\033[4D",valstr);
 	do {
 		ch=getc(stdin);
 		if (ch==0x1b) 

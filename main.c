@@ -451,7 +451,6 @@ int main (int argc, char **argv) {
 	static_sensor.comp2 = -0.0000004875;
 	static_sensor.comp1 = -0.2670286916;
 	static_sensor.comp0 = -18.7077108239;
-	static_sensor.Pcomp2 = 15365;
 
 	dynamic_sensor.offset = 0.0;
 	dynamic_sensor.linearity = 1.0;
