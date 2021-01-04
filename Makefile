@@ -19,7 +19,7 @@ $(ODIR)/%.o: %.c
 	mkdir -p $(ODIR)
 	$(CC) -DVERSION_GIT=\"$(GIT_VERSION)\" -c -o $@ $< $(CFLAGS)
 	
-all: sensord sensorcal cal
+all: sensord cal compdata
 
 version.h: 
 	@echo Git version $(GIT_VERSION)
@@ -31,7 +31,7 @@ doc:
 sensord: $(OBJ)
 	$(CC) -g -o $@ $^ $(LIBS)
 	
-sensorcal: $(OBJ_CAL)
+cal: $(OBJ_CAL)
 	$(CC) -g -o $@ $^
 
 compdata: $(OBJ_COMPDATA)
