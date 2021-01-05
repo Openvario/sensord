@@ -18,6 +18,7 @@
 
 #include "24c16.h"
 #include "ams5915.h"
+#include "ms5611.h"
 #include "sensorcal.h"
 #include <stdio.h>
 #include <string.h>
@@ -51,22 +52,26 @@ int calibrate_ams5915(t_eeprom_data* data)
 	
 	//initialize differential pressure sensor
 	ams5915_init(&dynamic_sensor);
+	clock_gettime(CLOCK_REALTIME,&sensor_prev);
+	sensor_wait(112500);
+	clock_gettime(CLOCK_REALTIME,&sensor_prev);
 	
-	for (i=0;i<10 ;i++)
+	for (i=0;i<800;i++)
 	{
 		// read AMS5915
+		sensor_wait(12500);
 		ams5915_measure(&dynamic_sensor);
+		clock_gettime(CLOCK_REALTIME,&sensor_prev);
 		ams5915_calculate(&dynamic_sensor);
 		
 		// wait some time ...
-		usleep(1000000);
 		printf("Measured: %f\n",dynamic_sensor.p);
 		
 		// calc offset 
 		offset += dynamic_sensor.p;
 	}
 		
-	data->zero_offset = -1*(offset/10);
+	data->zero_offset = -1*(offset/800);
 	
 	return(0);
 }

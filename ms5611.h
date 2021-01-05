@@ -56,6 +56,8 @@ typedef struct {
 	int secordcomp;
 } t_ms5611;
 
+struct timespec sensor_prev;
+
 // prototypes
 int ms5611_init(t_ms5611 *);
 int ms5611_reset(t_ms5611 *);
@@ -68,3 +70,5 @@ int ms5611_read_pressure(t_ms5611 *);
 int ms5611_read_temp(t_ms5611 *, int);
 int ms5611_start_temp(t_ms5611 *);
 int ms5611_start_pressure(t_ms5611 *);
+float sensor_wait (float time);
+

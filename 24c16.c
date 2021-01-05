@@ -31,10 +31,9 @@ int update_checksum(t_eeprom_data* data)
 
 int eeprom_read_data(t_24c16 *eeprom, t_eeprom_data *data)
 {
-	int result;
-
 	// read eeprom data to struct
-	result = eeprom_read(eeprom, (char*)data, 0x00, sizeof(*data));
+	if (eeprom_read(eeprom, (char*)data, 0x00, sizeof(*data))==1)
+		return 1;						// Failed to read the EEPROM
 	
 	// verify checksum
 	if (!verify_checksum(data))

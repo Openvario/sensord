@@ -52,7 +52,6 @@
 #define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
  
 #define MEASTIMER (SIGRTMAX)
-#define DELTA_TIME_US(T1, T2)	(((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)			
 #define DELTA_TIME(T1,T2)       (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec)))
 
 // Sensor objects
@@ -92,29 +91,9 @@ FILE *fp_datalog=NULL;
 //FILE *fp1=NULL;
 //FILE *fp2=NULL;
 
-struct timespec sensor_cur;
-struct timespec sensor_prev;
-
 //FILE *fp_rawlog=NULL;
 
 enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
-
-float sensor_wait (float time)
-{
-	struct timespec curtime;
-	float deltaTime;
-
-	clock_gettime(CLOCK_REALTIME,&curtime);
-	deltaTime=DELTA_TIME_US(curtime,sensor_prev);
-	if (time-deltaTime>2000) usleep(time-deltaTime);
-	while (deltaTime<time) 
-	{
-		usleep(50);
-		clock_gettime(CLOCK_REALTIME,&curtime);
-		deltaTime=DELTA_TIME_US(curtime,sensor_prev);
-	} 
-	return (deltaTime-time);
-}
 
 //typedef enum { measure_only, record, replay} t_measurement_mode;
 
@@ -126,7 +105,7 @@ float sensor_wait (float time)
 * Signal handler for catching STRG-C singal from command line
 * Closes all open files handles like log files
 * @date 17.04.2014 born
-*
+
 */ 
 void sigintHandler(int sig_num){
 
@@ -160,11 +139,11 @@ void pressure_measurement_handler(int record)
 {
 	static unsigned int meas_counter=1, glitchstart=0,shutdown=0,deltaxmax=0;
 	int x=0, deltax;
-	double deltaTime, comp;
+	double comp;
 
 	// if early, wait
 	// if more than 2ms late, increase the glitch counter
-	if ((deltaTime=sensor_wait(12500))>2000) { glitchstart=8; glitch+=8; }
+	if ((sensor_wait(12500))>2000) { glitchstart=8; glitch+=8; }
 	if (meas_counter&1) {
 		// read pressure sensors
 		x|=ms5611_read_temp(&tep_sensor,glitch);
@@ -261,7 +240,7 @@ void pressure_measurement_handler(int record)
 	meas_counter++;
 	if (io_mode.sensordata_to_file == TRUE) {
 		if ((meas_counter%2==1) && (record))
-			fprintf(fp_datalog, "%.4f %.4f %f %d %d %d %d %d %d %d %d %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
+			fprintf(fp_datalog, "%.4f %.4f %f %u %u %u %u %u %u %u %u %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
 	}
 }
 
@@ -433,7 +412,8 @@ int main (int argc, char **argv) {
 	
 	//initialize static pressure sensor
 	ms5611_reset(&static_sensor);
-	usleep(10000);
+	clock_gettime(CLOCK_REALTIME,&sensor_prev);
+	sensor_wait(10e3);
 	ms5611_init(&static_sensor);
 	static_sensor.secordcomp = g_secordcomp;
 	static_sensor.valid = 1;
@@ -448,7 +428,9 @@ int main (int argc, char **argv) {
 		
 	//initialize tep pressure sensor
 	ms5611_reset(&tep_sensor);
-	usleep(10000);
+
+	clock_gettime(CLOCK_REALTIME,&sensor_prev);
+	sensor_wait(10e3);
 	ms5611_init(&tep_sensor);
 	tep_sensor.secordcomp = g_secordcomp;
 	tep_sensor.valid = 1;
@@ -490,7 +472,7 @@ int main (int argc, char **argv) {
 
 	for (i=0;sidx<iter;) 
 	{
-		if (noglitch>29) usleep (250e3);
+		if (noglitch>29) sensor_wait(250e3);
 		pressure_measurement_handler(1);
 		if ((sidx%1000)==0) { 
 			if (i==0) { 

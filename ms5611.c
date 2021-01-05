@@ -31,8 +31,28 @@
 #include <string.h>
 #include "def.h"
 
+#define DELTA_TIME_US(T1, T2)   (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)     
+
 extern int g_debug;
 extern FILE *fp_console;
+
+float sensor_wait (float time)
+{
+	struct timespec curtime;
+	float deltaTime;
+
+	clock_gettime(CLOCK_REALTIME,&curtime);
+	deltaTime=DELTA_TIME_US(curtime,sensor_prev);
+	if (time-deltaTime>2000) usleep(time-deltaTime);
+	while (deltaTime<time) 
+	{
+		usleep(50);
+		clock_gettime(CLOCK_REALTIME,&curtime);
+		deltaTime=DELTA_TIME_US(curtime,sensor_prev);
+	} 
+	return (deltaTime-time);
+}
+
 
 /**
 * @brief Establish connection to MS5611 pressure sensor

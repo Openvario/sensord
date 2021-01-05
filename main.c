@@ -55,7 +55,6 @@
 #define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
  
 #define MEASTIMER (SIGRTMAX)
-#define DELTA_TIME_US(T1, T2)	(((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)			
 #define DELTA_TIME(T1,T2)       (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec)))
 
 timer_t  measTimer;
@@ -91,29 +90,9 @@ FILE *fp_sensordata=NULL;
 FILE *fp_datalog=NULL;
 FILE *fp_config=NULL;
 
-struct timespec sensor_cur;
-struct timespec sensor_prev;
-
 //FILE *fp_rawlog=NULL;
 
 enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
-
-float sensor_wait (float time)
-{
-	struct timespec curtime;
-	float deltaTime;
-
-	clock_gettime(CLOCK_REALTIME,&curtime);
-	deltaTime=DELTA_TIME_US(curtime,sensor_prev);
-	if (time-deltaTime>2000) usleep(time-deltaTime);
-	while (deltaTime<time) 
-	{
-		usleep(50);
-		clock_gettime(CLOCK_REALTIME,&curtime);
-		deltaTime=DELTA_TIME_US(curtime,sensor_prev);
-	} 
-	return (deltaTime-time);
-}
 
 //typedef enum { measure_only, record, replay} t_measurement_mode;
 
@@ -262,7 +241,6 @@ void pressure_measurement_handler(void)
 {
 	static int meas_counter = 1, glitch = 0, glitchstart=0, deltaxmax=0,shutoff=0;
 	static struct timespec kalman_cur, kalman_prev;
-	float deltaTime;
 	int deltax,reject=0;
 	double correction, cor2;
 
@@ -285,7 +263,7 @@ void pressure_measurement_handler(void)
 
 		// if more than 2ms late, increase the glitch counter
 
-		if ((deltaTime=sensor_wait(12500))>2000) { glitchstart=8; glitch+=8; }
+		if ((sensor_wait(12500))>2000) { glitchstart=8; glitch+=8; }
 		if (meas_counter&1) {
 			// read pressure sensors
 			ms5611_read_temp(&tep_sensor,glitch);
@@ -413,7 +391,7 @@ void pressure_measurement_handler(void)
 			}
 			if (io_mode.sensordata_to_file == TRUE) {
 				if (tj) 
-					fprintf(fp_datalog, "%.4f %.4f %f %d %d %d %d %d %d %d %d %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
+					fprintf(fp_datalog, "%.4f %.4f %f %u %u %u %u %u %u %u %u %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
 				else fprintf(fp_datalog, "%.4f,%.4f,%.4f\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p);
 			}
 		}
@@ -578,7 +556,8 @@ int main (int argc, char **argv) {
 		
 		//initialize static pressure sensor
 		ms5611_reset(&static_sensor);
-		usleep(10000);
+		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		sensor_wait(10e3);
 		ms5611_init(&static_sensor);
 		static_sensor.secordcomp = g_secordcomp;
 		static_sensor.valid = 1;
@@ -593,7 +572,8 @@ int main (int argc, char **argv) {
 		
 		//initialize tep pressure sensor
 		ms5611_reset(&tep_sensor);
-		usleep(10000);
+                clock_gettime(CLOCK_REALTIME,&sensor_prev);
+                sensor_wait(10e3);
 		ms5611_init(&tep_sensor);
 		tep_sensor.secordcomp = g_secordcomp;
 		tep_sensor.valid = 1;
@@ -701,9 +681,7 @@ int main (int argc, char **argv) {
 		while(sock_err >= 0)
 		{
 			if (tj)
-			{	
-				if ((++j)%1023==100) usleep (250e3);
-			}
+				if ((++j)%1023==100) sensor_wait(250e3);
 			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
 			//debug_print("Sock_err: %d\n",sock_err);
