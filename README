@@ -20,10 +20,10 @@ PLEASE NOTE that compdata will report whether it thinks values it determines are
 disregard "BAD" if found describing coefficients.  However, Overrun/underrun errors, or > 70 on std deviation is bad.  If these
 occur, you should re-run compdata.
 
-2) Another new change is in the cal program.  Cal is used to determine the mean offset on the pitot sensor when there is no pressure 
-differential.  Previously, cal took 10 measurements, ~1 second apart, reported them and averaged them.  The data is then stored on 
-the EEPROM.  The new version will take 800 measures 12.5ms apart, average them, and store the data to the EEPROM, but will not report
-them.  This should give more accurate results.
+2) Another new change is in the sensorcal program.  Sensorcal is used to determine the mean offset on the pitot sensor when there 
+is no pressure differential.  Previously, sensorcal took 10 measurements, ~1 second apart, reported them and averaged them.  The 
+data is then stored on the EEPROM.  The new version will take 800 measures 12.5ms apart, average them, and store the data to the 
+EEPROM.  This should give more accurate results.
 
 3) At this point in time it is recommended that sensord, variod, and pulseaudio are run as a forked service or from the commandline.
 When run as a regular service this can make the timing jitter worse, and results in erroneous vario readings, as well as clicks and 
