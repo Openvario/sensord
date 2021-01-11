@@ -148,9 +148,9 @@ void pressure_measurement_handler(int record)
 		// read pressure sensors
 		x|=ms5611_read_temp(&tep_sensor,glitch);
 		x|=ms5611_read_pressure(&static_sensor);
-		x|=ms5611_start_temp(&static_sensor);
-		clock_gettime(CLOCK_REALTIME,&sensor_prev);
 		x|=ms5611_start_pressure(&tep_sensor);
+		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		x|=ms5611_start_temp(&static_sensor);
 
 		if (abs((int)static_sensor.D1l-(int) static_sensor.D1)<100e3) {
 			if (glitch==0) {
@@ -165,7 +165,7 @@ void pressure_measurement_handler(int record)
 				if (deltax>deltaxmax) deltaxmax=deltax;
 				if ((--glitchstart)==0) {
 					if (deltaxmax>15)
-						glitch += ((int) round(log((double)(deltaxmax)*.0666666666666)*45))+12;
+						glitch += ((int) round(log((double)(deltaxmax)*config.timing_log)*config.timing_mult))+config.timing_off;
 					deltaxmax=0;
 				}
 			}
@@ -210,7 +210,7 @@ void pressure_measurement_handler(int record)
 				if (deltax>deltaxmax) deltaxmax=deltax;
 				if ((--glitchstart)==0) {
 					if (deltaxmax>15)
-						glitch += ((int) round(log((double)(deltaxmax)*.0666666666666)*45))+12;
+						glitch += ((int) round(log((double)(deltaxmax)*config.timing_log)*config.timing_mult))+config.timing_off;
 					deltaxmax=0;
 				}
 			}
@@ -312,6 +312,10 @@ int main (int argc, char **argv) {
 	tep_sensor.Pcomp2 = static_sensor.Pcomp2 = -0.0000004638;
 	tep_sensor.Pcomp1 = static_sensor.Pcomp1 =  0.9514328801;
 	tep_sensor.Pcomp0 = static_sensor.Pcomp0 =  0.1658634996;
+
+	config.timing_log  = 0.06666666666;
+	config.timing_mult = 50;
+	config.timing_off  = 12;
 
 	//open file for raw output
 	//fp_rawlog = fopen("raw.log","w");
@@ -512,13 +516,13 @@ int main (int argc, char **argv) {
 	if ((2.5e-6<pf[1][0]) || (pf[1][0]<-2.5e-6)) i|=5;
 	printf ("%s\t2.5e-6 > quadrature term (%s%4.3e%s and %s%4.3e%s) > -2.5e-6\n",goodbadstr[i&1],colors[(i>>1)&1],pf[0][0],colors[0],colors[(i>>2)&1],pf[1][0],colors[0]);
 	pos|=i;
-	if ((-.28<pf[0][1]) || (pf[0][1]<-0.35)) i=3; else i=0;
-	if ((-.28<pf[1][1]) || (pf[1][1]<-0.35)) i|=5;
-	printf ("%s\t-0.28 > linear term (%s%6.5f%s and %s%6.5f%s) > -0.35\n",goodbadstr[i&1],colors[(i>>1)&1],pf[0][1],colors[0],colors[(i>>2)&1],pf[1][1],colors[0]);
+	if ((-.20<pf[0][1]) || (pf[0][1]<-0.35)) i=3; else i=0;
+	if ((-.20<pf[1][1]) || (pf[1][1]<-0.35)) i|=5;
+	printf ("%s\t-0.20 > linear term (%s%6.5f%s and %s%6.5f%s) > -0.35\n",goodbadstr[i&1],colors[(i>>1)&1],pf[0][1],colors[0],colors[(i>>2)&1],pf[1][1],colors[0]);
 	pos|=i;
-	if ((0<pf[0][2]) || (pf[0][2]<-10)) i=3; else i=0;
-	if ((0<pf[1][2]) || (pf[1][2]<-10)) i|=5;
-	printf ("%s\t0 > constant term (%s%6.5f%s and %s%6.5f%s) > -10\n",goodbadstr[i&1],colors[(i>>1)&1],pf[0][2],colors[0],colors[(i>>2)&1],pf[1][2],colors[0]);
+	if ((0<pf[0][2]) || (pf[0][2]<-50)) i=3; else i=0;
+	if ((0<pf[1][2]) || (pf[1][2]<-50)) i|=5;
+	printf ("%s\t0 > constant term (%s%6.5f%s and %s%6.5f%s) > -50\n",goodbadstr[i&1],colors[(i>>1)&1],pf[0][2],colors[0],colors[(i>>2)&1],pf[1][2],colors[0]);
 	pos=(pos|i)&1;
 	if (pos) 
 		printf ("These results could be better.  Suggest trying again.\n");

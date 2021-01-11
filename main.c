@@ -268,9 +268,9 @@ void pressure_measurement_handler(void)
 			// read pressure sensors
 			ms5611_read_temp(&tep_sensor,glitch);
 			ms5611_read_pressure(&static_sensor);
-			ms5611_start_temp(&static_sensor);
-			clock_gettime(CLOCK_REALTIME,&sensor_prev);
 			ms5611_start_pressure(&tep_sensor);
+			clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			ms5611_start_temp(&static_sensor);
 			if (abs((int)static_sensor.D1l-(int) static_sensor.D1)>100e3)  reject=1;
 			if (!glitch) 
 				if (tep_sensor.D2l>tep_sensor.D2+300) { glitchstart=8; glitch=8; }
@@ -282,7 +282,7 @@ void pressure_measurement_handler(void)
 				if (deltax>deltaxmax) deltaxmax=deltax;
 				if ((--glitchstart)==0) {
 					if (deltaxmax>15) 
-						glitch += ((int) round(log((double)(deltaxmax)*.0666666666666)*40))+12;
+						glitch += ((int) round(log((double)(deltaxmax)*config.timing_log)*config.timing_mult))+config.timing_off;
 					deltaxmax=0;
 				}
 			}		
@@ -326,7 +326,7 @@ void pressure_measurement_handler(void)
 				if (deltax>deltaxmax) deltaxmax=deltax;
  				if ((--glitchstart)==0) {
 					if (deltaxmax>15)
-						glitch += ((int) round(log((double)(deltaxmax)*0.0666666666666)*40))+12;
+						glitch += ((int) round(log((double)(deltaxmax)*config.timing_log)*config.timing_mult))+config.timing_off;
 					deltaxmax=0;
 				}
  			}
@@ -442,6 +442,9 @@ int main (int argc, char **argv) {
 	tep_sensor.Pcomp1 = static_sensor.Pcomp1 =  0.9514328801;
 	tep_sensor.Pcomp0 = static_sensor.Pcomp0 =  0.1658634996;
 	
+	config.timing_log        = 0.066666666666666666666;
+	config.timing_mult       = 50;
+	config.timing_off        = 12;
 	config.output_POV_E = 0;
 	config.output_POV_P_Q = 0;
 	
