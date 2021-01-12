@@ -171,6 +171,7 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 						temp_sensor->maxrollover=temp_sensor->rollover+40;
 						if (temp_sensor->maxrollover<100) temp_sensor->maxrollover=100;
 					}
+
 				}
 			}
 			

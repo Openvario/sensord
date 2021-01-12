@@ -255,6 +255,7 @@ void pressure_measurement_handler(void)
 	static int meas_counter = 1;
 	int reject = 0;
 
+
 	// Initialize timers if first time through.
 	if (meas_counter==1) clock_gettime(CLOCK_REALTIME,&kalman_prev);
 
