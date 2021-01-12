@@ -37,6 +37,7 @@
 //#include "version.h"
 //#include "w1.h"
 #include "def.h"
+
 #include "ds2482.h"
 #include "ms5611.h"
 #include "ams5915.h"
@@ -61,6 +62,7 @@ t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
 t_ads1110 voltage_sensor;
 t_ds2482 temp_sensor;
+
 
 t_config config;
 t_io_mode io_mode;

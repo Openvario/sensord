@@ -256,6 +256,7 @@ void pressure_measurement_handler(void)
 	int reject = 0;
 	static struct timespec kalman_prev; 
 
+
 	// Initialize timers if first time through.
 	if (meas_counter==1) clock_gettime(CLOCK_REALTIME,&kalman_prev);
 
