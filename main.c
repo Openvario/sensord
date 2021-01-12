@@ -252,8 +252,9 @@ int NMEA_message_handler(int sock, int valid_temp)
 */ 
 void pressure_measurement_handler(void)
 {
-	static int meas_counter = 1;
+	static int meas_counter = 1, glitch = 0;
 	int reject = 0;
+	static struct timespec kalman_prev; 
 
 	// Initialize timers if first time through.
 	if (meas_counter==1) clock_gettime(CLOCK_REALTIME,&kalman_prev);
@@ -267,7 +268,7 @@ void pressure_measurement_handler(void)
 
 	if (io_mode.sensordata_from_file != TRUE) 
 	{	
-		static int glitchstart = 0, deltaxmax = 0;
+		static int glitchstart = 0, deltaxmax = 0, shutoff = 0;
 
 		// read AMS5915
 		ams5915_measure(&dynamic_sensor);
@@ -280,7 +281,6 @@ void pressure_measurement_handler(void)
 		if (meas_counter&1) {
 			// read pressure sensors
 			int deltax;
-			static int shutoff = 0, glitch = 0;
 
 			ms5611_read_temp(&tep_sensor,glitch);
 			ms5611_read_pressure(&static_sensor);
@@ -405,7 +405,7 @@ void pressure_measurement_handler(void)
 				tep_sensor.valid = 0;
 			} else {
 				// of tep pressure
-				static struct timespec kalman_cur, kalman_prev;
+				struct timespec kalman_cur;
 
 				tep_sensor.valid=1;
 				clock_gettime(CLOCK_REALTIME,&kalman_cur);
