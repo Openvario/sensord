@@ -252,8 +252,7 @@ int NMEA_message_handler(int sock, int valid_temp)
 */ 
 void pressure_measurement_handler(void)
 {
-	static int meas_counter = 1, glitch = 0, shutoff=0;
-	static struct timespec kalman_cur, kalman_prev;
+	static int meas_counter = 1;
 	int reject = 0;
 
 	// Initialize timers if first time through.
@@ -281,6 +280,7 @@ void pressure_measurement_handler(void)
 		if (meas_counter&1) {
 			// read pressure sensors
 			int deltax;
+			static int shutoff = 0, glitch = 0;
 
 			ms5611_read_temp(&tep_sensor,glitch);
 			ms5611_read_pressure(&static_sensor);
@@ -404,8 +404,9 @@ void pressure_measurement_handler(void)
  				// tep pressure out of range
 				tep_sensor.valid = 0;
 			} else {
-
 				// of tep pressure
+				static struct timespec kalman_cur, kalman_prev;
+
 				tep_sensor.valid=1;
 				clock_gettime(CLOCK_REALTIME,&kalman_cur);
 				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, DELTA_TIME(kalman_cur,kalman_prev));
@@ -424,9 +425,10 @@ void pressure_measurement_handler(void)
 int temperature_measurement_handler(void)
 {
 
-	static int temp_counter = 0, done = 0;
+	static int done = 0;
 
 	if (temp_sensor.present) {
+		static int temp_counter = 0;
 		if (temp_counter==0) {
 			if (OWReset(&temp_sensor)==1) { // Reset
 				if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
