@@ -46,133 +46,133 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 		while (! feof(fp))
 		{
 			// get line from config file
-			fgets(line, 70, fp);
-			//printf("getting line: '%69s'\n", line);
+			if (fgets(line, 70, fp)!=NULL) {
+				//printf("getting line: '%69s'\n", line);
 			
-			// check if line is comment
-			if((!(line[0] == '#')) && (!(line[0] == '\n')))
-			{
-			
-				// get first config tag
-				sscanf(line, "%19s", tmp);
+				// check if line is comment
+				if((!(line[0] == '#')) && (!(line[0] == '\n')))
+				{
 				
-				// check for output of POV_E sentence
-				if (strcmp(tmp,"output_POV_E") == 0)
-				{	
-					config->output_POV_E = 1;
-					//printf("OUTput POV_E enabled !! \n");
-				}
-				
-				// check for output of POV_P_Q sentence
-				if (strcmp(tmp,"output_POV_P_Q") == 0)
-				{	
-					config->output_POV_P_Q = 1;
-					//printf("OUTput POV_P_Q enabled !! \n");
-				}
-				
-				// check for output of POV_V sentence
-				if (strcmp(tmp,"output_POV_V") == 0)
-				{	
-					config->output_POV_V= 1;
-					//printf("OUTput POV_V enabled !! \n");
-				}
-				
-				// check for output of POV_T sentence
-                                if (strcmp(tmp,"output_POV_T") == 0)
-                                {
-                                        config->output_POV_T= 1;
-                                        //printf("OUTput POV_T enabled !! \n");
-                                }
-
-				// check for static_sensor
-				if (strcmp(tmp,"static_sensor") == 0)
-				{
-					// get config data for static sensor
-					sscanf(line, "%19s %f %f", tmp, &static_sensor->offset, &static_sensor->linearity);
-					static_sensor->offset*=16;
-				}
-
-				if (strcmp(tmp,"static_comp") == 0)
-				{
-					// get compensation data for static sensor
-					sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->comp2, &static_sensor->comp1, &static_sensor->comp0);
-				}
-
-				if (strcmp(tmp,"static_Pcomp") == 0)
-				{
-					// get pressure compensation data for static sensor
-					sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->Pcomp2, &static_sensor->Pcomp1, &static_sensor->Pcomp0);
-				}
-
-				// check for tek_sensor
-				if (strcmp(tmp,"tek_sensor") == 0)
-				{
-					// get config data for tek sensor
-					sscanf(line, "%19s %f %f", tmp, &tek_sensor->offset, &tek_sensor->linearity);
-					tek_sensor->offset*=16;
-				}
-
-				if (strcmp(tmp,"tek_comp") == 0)
-				{
-					// get compensation data for tek sensor
-					sscanf (line, "%19s %lf %lf %lf",tmp, &tek_sensor->comp2, &tek_sensor->comp1, &tek_sensor->comp0);
-				}
-
-				if (strcmp(tmp,"tek_Pcomp") == 0)
-				{
-					// get pressure compensation data for tek sensor
-					sscanf(line, "%19s %lf %lf %lf",tmp, &tek_sensor->Pcomp2, &tek_sensor->Pcomp1, &tek_sensor->Pcomp0);
-				}
-				
-				// check for glitch watchdog_timing
-				if (strcmp(tmp,"glitch_timing") == 0)
-				{
-					// get config data for glitch watchdog timer
-					sscanf(line, "%19s %lf %lf %lf", tmp, &config->timing_log, &config->timing_mult, &config->timing_off);
-				}
-
-				// check for dynamic_sensor
-				if (strcmp(tmp,"dynamic_sensor") == 0)
-				{
-					// get config data for dynamic sensor
-					sscanf(line, "%19s %f %f", tmp, &dynamic_sensor->offset, &dynamic_sensor->linearity);
-				}
-				
-				// check for vario config
-				if (strcmp(tmp,"vario_config") == 0)
-				{
-					// get config data for dynamic sensor
-					sscanf(line, "%19s %f", tmp, &config->vario_x_accel);
-				}
-				
-				// check for voltage sensor config
-				if (strcmp(tmp,"voltage_config") == 0)
-				{
-					// get config data for dynamic sensor
-				        sscanf(line, "%19s %f %f", tmp, &voltage_sensor->scale,&voltage_sensor->offset);
-				        voltage_sensor->scale=1.0/voltage_sensor->scale;
-				}
-
-				// check for temperature sensor config
-				if (strcmp(tmp,"temp_config") == 0) {
-					// get config data for temperature sensor
-					sscanf(line,"%19s %d",tmp, &temp_sensor->databits);
-					if ((temp_sensor->databits<9) || (temp_sensor->databits>12)) {
-						printf ("Temperature sensor databits (%d) is not valid, must be in the range of 9-12.  Using default value of 10 bits.\n",temp_sensor->databits);
-						temp_sensor->databits=10;
+					// get first config tag
+					sscanf(line, "%19s", tmp);
+					
+					// check for output of POV_E sentence
+					if (strcmp(tmp,"output_POV_E") == 0)
+					{	
+						config->output_POV_E = 1;
+						//printf("OUTput POV_E enabled !! \n");
+					}
+					
+					// check for output of POV_P_Q sentence
+					if (strcmp(tmp,"output_POV_P_Q") == 0)
+					{	
+						config->output_POV_P_Q = 1;
+						//printf("OUTput POV_P_Q enabled !! \n");
+					}
+					
+					// check for output of POV_V sentence
+					if (strcmp(tmp,"output_POV_V") == 0)
+					{	
+						config->output_POV_V= 1;
+						//printf("OUTput POV_V enabled !! \n");
+					}
+						
+					// check for output of POV_T sentence
+                	                if (strcmp(tmp,"output_POV_T") == 0)
+                        	        {
+                                	        config->output_POV_T= 1;
+                                        	//printf("OUTput POV_T enabled !! \n");
+	                                }
+	
+					// check for static_sensor
+					if (strcmp(tmp,"static_sensor") == 0)
+					{
+						// get config data for static sensor
+						sscanf(line, "%19s %f %f", tmp, &static_sensor->offset, &static_sensor->linearity);
+						static_sensor->offset*=16;
+					}
+	
+					if (strcmp(tmp,"static_comp") == 0)
+					{
+						// get compensation data for static sensor
+						sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->comp2, &static_sensor->comp1, &static_sensor->comp0);
+					}
+	
+					if (strcmp(tmp,"static_Pcomp") == 0)
+					{
+						// get pressure compensation data for static sensor
+						sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->Pcomp2, &static_sensor->Pcomp1, &static_sensor->Pcomp0);
+					}
+	
+					// check for tek_sensor
+					if (strcmp(tmp,"tek_sensor") == 0)
+					{
+						// get config data for tek sensor
+						sscanf(line, "%19s %f %f", tmp, &tek_sensor->offset, &tek_sensor->linearity);
+						tek_sensor->offset*=16;
+					}
+	
+					if (strcmp(tmp,"tek_comp") == 0)
+					{
+						// get compensation data for tek sensor
+						sscanf (line, "%19s %lf %lf %lf",tmp, &tek_sensor->comp2, &tek_sensor->comp1, &tek_sensor->comp0);
+					}
+	
+					if (strcmp(tmp,"tek_Pcomp") == 0)
+					{
+						// get pressure compensation data for tek sensor
+						sscanf(line, "%19s %lf %lf %lf",tmp, &tek_sensor->Pcomp2, &tek_sensor->Pcomp1, &tek_sensor->Pcomp0);
+					}
+					
+					// check for glitch watchdog_timing
+					if (strcmp(tmp,"glitch_timing") == 0)
+					{
+						// get config data for glitch watchdog timer
+						sscanf(line, "%19s %lf %lf %lf", tmp, &config->timing_log, &config->timing_mult, &config->timing_off);
+					}
+	
+					// check for dynamic_sensor
+					if (strcmp(tmp,"dynamic_sensor") == 0)
+					{
+						// get config data for dynamic sensor
+						sscanf(line, "%19s %f %f", tmp, &dynamic_sensor->offset, &dynamic_sensor->linearity);
+					}
+					
+					// check for vario config
+					if (strcmp(tmp,"vario_config") == 0)
+					{
+						// get config data for dynamic sensor
+						sscanf(line, "%19s %f", tmp, &config->vario_x_accel);
+					}
+					
+					// check for voltage sensor config
+					if (strcmp(tmp,"voltage_config") == 0)
+					{
+						// get config data for dynamic sensor
+					        sscanf(line, "%19s %f %f", tmp, &voltage_sensor->scale,&voltage_sensor->offset);
+					        voltage_sensor->scale=1.0/voltage_sensor->scale;
+					}
+	
+					// check for temperature sensor config
+					if (strcmp(tmp,"temp_config") == 0) {
+						// get config data for temperature sensor
+						sscanf(line,"%19s %d",tmp, &temp_sensor->databits);
+						if ((temp_sensor->databits<9) || (temp_sensor->databits>12)) {
+							printf ("Temperature sensor databits (%d) is not valid, must be in the range of 9-12.  Using default value of 10 bits.\n",temp_sensor->databits);
+							temp_sensor->databits=10;
+						}
+					}
+	
+					// check for temperature sensor sample rate
+					if (strcmp(tmp,"temp_rate") == 0) {
+						// get config data for temperature sensor sample rate
+						sscanf (line,"%19s %f",tmp, &data);
+						temp_sensor->rollover=((int)(round(80.0/data)));
+						temp_sensor->maxrollover=temp_sensor->rollover+40;
+						if (temp_sensor->maxrollover<100) temp_sensor->maxrollover=100;
 					}
 				}
-
-				// check for temperature sensor sample rate
-				if (strcmp(tmp,"temp_rate") == 0) {
-					// get config data for temperature sensor sample rate
-					sscanf (line,"%19s %f",tmp, &data);
-					temp_sensor->rollover=((int)(round(80.0/data)));
-					temp_sensor->maxrollover=temp_sensor->rollover+40;
-					if (temp_sensor->maxrollover<100) temp_sensor->maxrollover=100;
-				}
 			}
-	
 			
 		}
 		return(1);

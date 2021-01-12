@@ -270,8 +270,6 @@ void pressure_measurement_handler(void)
 	if (io_mode.sensordata_from_file != TRUE) 
 	{	
 		static int glitchstart = 0;
-		int deltax;
-		double correction;
 
 		// read AMS5915
 		ams5915_measure(&dynamic_sensor);
