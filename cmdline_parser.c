@@ -26,11 +26,13 @@
 #include "def.h"
 
 
+extern char config_filename[50];
 extern int g_debug;
 extern int g_log;
 
 extern int g_foreground;
 extern int g_secordcomp;
+extern int tj;
 
 extern FILE *fp_console;
 extern FILE *fp_sensordata;
@@ -43,20 +45,20 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 	int c;
 	char datalog_filename[50];
 	char sensordata_filename[50];
-	char config_filename[50];
 	
 	const char* Usage = "\n"\
-    "  -v              print version information\n"\
+	"  -v              print version information\n"\
 	"  -f              don't daemonize, stay in foreground\n"\
 	"  -c [filename]   use config file [filename]\n"\
-    "  -d[n]           set debug level. n can be [1..2]. default=1\n"\
+	"  -d[n]           set debug level. n can be [1..2]. default=1\n"\
+   	"  -j              turn on timing jitter... for testing only!\n"\
 	"  -r [filename]   record measurement values to file\n"\
-	"  -s              second order temperature compensation for MS5611 enable"
+	"  -s              second order temperature compensation for MS5611 enable\n"\
 	"  -p [filename]   use values from file instead of measuring\n"\
 	"\n";
 	
 	// check commandline arguments
-	while ((c = getopt (argc, argv, "vd::flhr:p:c:s")) != -1)
+	while ((c = getopt (argc, argv, "vd::fjlhr:p:c:s")) != -1)
 	{
 		switch (c) {
 			case 'v':
@@ -110,10 +112,16 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 				printf("!! STAY in g_foreground !!\n");
 				g_foreground = TRUE;
 				break;
-				
+
+			case 'j':
+				// Cause deliberate timing jitter
+				printf("!! Timing jitter on !!\n");
+				tj = TRUE;
+				break;
+
 			case 's':
 				// enable second order compensation
-				printf("Second order compenstaion ENABLE");
+				printf("Second order compensation ENABLE\n");
 				g_secordcomp = TRUE;
 				break;
 				
@@ -157,7 +165,7 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 				break;
 				
 			case '?':
-				printf("Unknow option %c\n", optopt);
+				printf("Unknown option %c\n", optopt);
 				printf("Usage: sensord [OPTION]\n%s",Usage);
 				printf("Exiting ...\n");
 				exit(EXIT_FAILURE);

@@ -79,15 +79,45 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 				{
 					// get config data for static sensor
 					sscanf(line, "%19s %f %f", tmp, &static_sensor->offset, &static_sensor->linearity);
+					static_sensor->offset*=16;
 				}
 				
+				// check for static_sensor_compensation
+				if (strcmp(tmp,"static_comp") == 0)
+				{
+					// get compensation data for static sensor
+					sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->comp2, &static_sensor->comp1, &static_sensor->comp0);
+				}
+				
+				// check for static_sensor_pressure_compensation
+				if (strcmp(tmp,"static_Pcomp") == 0)
+				{
+                                        // get pressure compensation data for static sensor
+                                        sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->Pcomp2, &static_sensor->Pcomp1, &static_sensor->Pcomp0);
+                                }
+
 				// check for tek_sensor
 				if (strcmp(tmp,"tek_sensor") == 0)
 				{
 					// get config data for tek sensor
-					sscanf(line, "%19s %f %f", tmp, &tek_sensor->offset, &tek_sensor->linearity);	
+					sscanf(line, "%19s %f %f", tmp, &tek_sensor->offset, &tek_sensor->linearity);
+					tek_sensor->offset*=16;
 				}
-				
+
+				// check for tek_sensor_compensation
+				if (strcmp(tmp,"tek_comp") == 0)
+				{
+					// get compensation data for tek sensor
+					sscanf (line, "%19s %lf %lf %lf",tmp, &tek_sensor->comp2, &tek_sensor->comp1, &tek_sensor->comp0);
+				}
+
+				// check for tek_sensor_pressure_compensation
+                                if (strcmp(tmp,"tek_Pcomp") == 0)
+                                {
+                                        // get pressure compensation data for tek sensor
+                                        sscanf(line, "%19s %lf %lf %lf",tmp, &tek_sensor->Pcomp2, &tek_sensor->Pcomp1, &tek_sensor->Pcomp0);
+                                }
+
 				// check for dynamic_sensor
 				if (strcmp(tmp,"dynamic_sensor") == 0)
 				{
@@ -95,6 +125,14 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					sscanf(line, "%19s %f %f", tmp, &dynamic_sensor->offset, &dynamic_sensor->linearity);
 				}
 				
+				// check for glitch watchdog_timing
+				if (strcmp(tmp,"glitch_timing") == 0)
+				{
+					// get config data for glitch watchdog timer
+					sscanf(line, "%19s %lf %lf %lf", tmp, &config->timing_log, &config->timing_mult, &config->timing_off);
+				}
+
+
 				// check for vario config
 				if (strcmp(tmp,"vario_config") == 0)
 				{

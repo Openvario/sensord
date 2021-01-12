@@ -33,19 +33,30 @@ typedef struct {
 	uint32_t C5s;
 	uint16_t C6;
 	uint32_t D1;
+	uint32_t D1f;
+	uint32_t D1l;
 	uint32_t D2;
+	uint32_t D2l;
 	uint32_t D2f;
 	int32_t dT;
 	int32_t temp;
 	int64_t off;
 	int64_t sens;
 	int32_t p_meas;
+	double Pcomp2;
+	double Pcomp1;
+	double Pcomp0;
+	double comp2;
+	double comp1;
+	double comp0;
 	float p;
 	float linearity;
 	float offset;
 	int valid;
 	int secordcomp;
 } t_ms5611;
+
+struct timespec sensor_prev;
 
 // prototypes
 int ms5611_init(t_ms5611 *);
@@ -59,3 +70,5 @@ int ms5611_read_pressure(t_ms5611 *);
 int ms5611_read_temp(t_ms5611 *, int);
 int ms5611_start_temp(t_ms5611 *);
 int ms5611_start_pressure(t_ms5611 *);
+float sensor_wait (float time);
+

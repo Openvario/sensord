@@ -55,7 +55,6 @@
 #define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
  
 #define MEASTIMER (SIGRTMAX)
-#define DELTA_TIME_US(T1, T2)	(((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)			
 #define DELTA_TIME(T1,T2)       (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec)))
 
 timer_t  measTimer;
@@ -81,37 +80,19 @@ float p_dynamic;
 
 int g_foreground=FALSE;
 int g_secordcomp=FALSE;
+int tj=FALSE;
 
 t_io_mode io_mode;
 
+char config_filename[50];
 FILE *fp_console=NULL;
 FILE *fp_sensordata=NULL;
 FILE *fp_datalog=NULL;
 FILE *fp_config=NULL;
 
-struct timespec sensor_cur;
-struct timespec sensor_prev;
-
 //FILE *fp_rawlog=NULL;
 
 enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
-
-float sensor_wait (float time)
-{
-	struct timespec curtime;
-	float deltaTime;
-
-	clock_gettime(CLOCK_REALTIME,&curtime);
-	deltaTime=DELTA_TIME_US(curtime,sensor_prev);
-	if (time-deltaTime>2000) usleep(time-deltaTime);
-	while (deltaTime<time) 
-	{
-		usleep(50);
-		clock_gettime(CLOCK_REALTIME,&curtime);
-		deltaTime=DELTA_TIME_US(curtime,sensor_prev);
-	} 
-	return (deltaTime-time);
-}
 
 //typedef enum { measure_only, record, replay} t_measurement_mode;
 
@@ -232,7 +213,7 @@ int NMEA_message_handler(int sock)
 			}
 		}
 	}
-	
+
 	return(sock_err);
 }
 
@@ -244,13 +225,24 @@ int NMEA_message_handler(int sock)
 * Timing handler to coordinate pressure measurement
 * @date 17.04.2014 born
 *
+* The MS5611 has been shown to have multiple different error modes.  The most common is that it is sensitive to timing jitter.  For reasons that are unknown, whenever the 
+* MS5611 is sampled it appears to bias an internal node in the sampler.  As a result, the output for any given steady state conversion frequency there will be a fixed offset.
+* Generally speaking, as long as the offset is fixed this isn't a big deal.  However, if there is a significant variation in timing, the the offset is no longer fixed and it
+* will induce what appears to be a delta function that decays off as if going through a 1st order LPF.  This offset can be seen in both temperature and pressure readings
+* and will be on both sensors.  The offset error is ratiometric between temperature and pressure, and as such if timing jitter is detected the pressure measurement handler
+* can determine how much change there has been between the filtered temperature value and the present temperature value and then put that into a quadratic function to add 
+* a compensating value for pressure.  Since pressure on 1 and temperature on 2 are simultaneously measured (and vice versa) the temperature reading on one sensor is used to
+* compensate the pressure reading on the other.
+*
+* Rarely, other glitches have been seen where the temperature and/or pressure reading on one sensor just drops a substantial amount.  As such, any reading that is more than 100,000
+* away from the previous reading is rejected.
 */ 
 void pressure_measurement_handler(void)
 {
-	static int meas_counter = 1, glitch = 0;
+	static int meas_counter = 1, glitch = 0, glitchstart=0, deltaxmax=0,shutoff=0;
 	static struct timespec kalman_cur, kalman_prev;
-	float deltaTime;
-	int calcVal;
+	int deltax,reject=0;
+	double correction, cor2;
 
 	// Initialize timers if first time through.
 	if (meas_counter==1) clock_gettime(CLOCK_REALTIME,&kalman_prev);
@@ -269,28 +261,51 @@ void pressure_measurement_handler(void)
 
 		// if early, wait
 
-                // if more than 2ms late, increase the glitch counter
-		
-		if ((deltaTime=sensor_wait(12500))>2000) glitch += 4 + ((int) (deltaTime))/5000;
+		// if more than 2ms late, increase the glitch counter
+
+		if ((sensor_wait(12500))>2000) { glitchstart=8; glitch+=8; }
 		if (meas_counter&1) {
 			// read pressure sensors
 			ms5611_read_temp(&tep_sensor,glitch);
 			ms5611_read_pressure(&static_sensor);
-			ms5611_start_temp(&static_sensor);
-			clock_gettime(CLOCK_REALTIME,&sensor_prev);
 			ms5611_start_pressure(&tep_sensor);
+			clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			ms5611_start_temp(&static_sensor);
+			if (abs((int)static_sensor.D1l-(int) static_sensor.D1)>100e3)  reject=1;
+			if (!glitch) 
+				if (tep_sensor.D2l>tep_sensor.D2+300) { glitchstart=8; glitch=8; }
+			if (glitchstart) {
+				if (glitch>glitchstart)
+					deltax=abs((int) tep_sensor.D2l-(int)tep_sensor.D2);
+				else
+					deltax=abs((int)tep_sensor.D2f-(int)tep_sensor.D2);
+				if (deltax>deltaxmax) deltaxmax=deltax;
+				if ((--glitchstart)==0) {
+					if (deltaxmax>15) 
+						glitch += ((int) round(log((double)(deltaxmax)*config.timing_log)*config.timing_mult))+config.timing_off;
+					deltaxmax=0;
+				}
+			}		
 
 			// if there was a glitch, compensate for the glitch
-			if (glitch) 
-			{
-				// decrement glitch counter, but don't go down to zero unless glitch is over
-				if ((tep_sensor.D2>(tep_sensor.D2f-15)) && (glitch==1)) glitch=0; 
-				else { 
-					if ((--glitch)==0) glitch=1; 
+			if (glitch) {	
+				if (--glitch>350) glitch=350;
+				if ((++shutoff)>399) { 
+					shutoff=glitch=0;
+					tep_sensor.D2f=tep_sensor.D2;
+					static_sensor.D2f=static_sensor.D2;
 				}
 				// compensate for the glitch
-				calcVal=((tep_sensor.D2-tep_sensor.D2f)*30);
-				static_sensor.D1+=(calcVal/101);
+				deltax = (int) tep_sensor.D2f-(int) tep_sensor.D2;
+				if (!glitchstart)
+					if (abs(deltax)<15) glitch=0;
+				correction = deltax*deltax*static_sensor.comp2+deltax*static_sensor.comp1+static_sensor.comp0;
+				cor2=static_sensor.p*1e-5;
+				correction *= (cor2*cor2*static_sensor.Pcomp2+cor2*static_sensor.Pcomp1+static_sensor.Pcomp0);
+				static_sensor.D1+=(int) round(correction);
+			} else {
+				static_sensor.D1f=(static_sensor.D1f*7+static_sensor.D1)/8;
+				shutoff=0;
 			}
 			ms5611_calculate_pressure(&static_sensor);
 		} else {
@@ -300,19 +315,37 @@ void pressure_measurement_handler(void)
 			ms5611_start_temp(&tep_sensor);
 			clock_gettime(CLOCK_REALTIME,&sensor_prev);
 			ms5611_start_pressure(&static_sensor);
+			if (abs((int) tep_sensor.D1l-(int) tep_sensor.D1)>100e3) reject=1;
+			if (!glitch)
+				if (static_sensor.D2l>static_sensor.D2+300) { glitchstart=8; glitch=8; }
+			if (glitchstart) {
+				if (glitch>glitchstart)
+					deltax=abs((int) static_sensor.D2l-(int)static_sensor.D2);
+				else
+					deltax=abs((int)static_sensor.D2f-(int) static_sensor.D2);
+				if (deltax>deltaxmax) deltaxmax=deltax;
+ 				if ((--glitchstart)==0) {
+					if (deltaxmax>15)
+						glitch += ((int) round(log((double)(deltaxmax)*config.timing_log)*config.timing_mult))+config.timing_off;
+					deltaxmax=0;
+				}
+ 			}
 
 			// if there was a glitch, compensate for the glitch
 			if (glitch) 
 			{
-				// decrement glitch counter, but down go down to zero unless glitch is over
-				if ((static_sensor.D2>(static_sensor.D2f-15)) && (glitch==1)) glitch=0; 
-				else { 
-					if ((--glitch)==0) glitch=1; 
-				} 
-
+				if (--glitch>350) glitch=350;
 				// compensate for the glitch
-				calcVal=((static_sensor.D2-static_sensor.D2f)*30);
-				tep_sensor.D1+=(calcVal/101);
+				deltax = (int) static_sensor.D2f-(int) static_sensor.D2;
+				if (!glitchstart)
+					if (abs(deltax)<15) glitch=0;
+				correction = deltax*deltax*tep_sensor.comp2+deltax*tep_sensor.comp1+tep_sensor.comp0;
+				cor2=tep_sensor.p*1e-5;
+				correction *= (cor2*cor2*tep_sensor.Pcomp2+cor2*tep_sensor.Pcomp1+tep_sensor.Pcomp0);
+				tep_sensor.D1+=(int) round(correction);
+			} else {
+				tep_sensor.D1f = (tep_sensor.D1f*7+tep_sensor.D1)/8;
+				shutoff=0;
 			}
 			ms5611_calculate_pressure(&tep_sensor);
 		}
@@ -338,13 +371,11 @@ void pressure_measurement_handler(void)
 		p_dynamic = 0.0;
 	}
 
-	if (glitch<2) 
-	{
+	if (reject==0) {
 		if (meas_counter&1) {
 			// of static pressure
 			p_static = (7*p_static + static_sensor.p) / 8;
-		}	
-		else {
+		} else {
 			// check tep_pressure input value for validity
 			if ((tep_sensor.p/100 < 100) || (tep_sensor.p/100 > 1200))
 			{
@@ -359,7 +390,9 @@ void pressure_measurement_handler(void)
 				kalman_prev=kalman_cur;
 			}
 			if (io_mode.sensordata_to_file == TRUE) {
-				fprintf(fp_datalog, "%f,%f,%f\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p);
+				if (tj) 
+					fprintf(fp_datalog, "%.4f %.4f %f %u %u %u %u %u %u %u %u %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
+				else fprintf(fp_datalog, "%.4f,%.4f,%.4f\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p);
 			}
 		}
 	}
@@ -369,10 +402,10 @@ void pressure_measurement_handler(void)
 int main (int argc, char **argv) {
 	
 	// local variables
-	int i=0;
+	int i = 0,j = 0;
 	int result;
 	int sock_err = 0;
-	
+
 	t_24c16 eeprom;
 	t_eeprom_data data;
 	
@@ -393,13 +426,25 @@ int main (int argc, char **argv) {
 	// initialize variables
 	static_sensor.offset = 0.0;
 	static_sensor.linearity = 1.0;
-	
+	static_sensor.comp2 = -0.0000004875;
+	static_sensor.comp1 = -0.2670286916;
+	static_sensor.comp0 = -18.7077108239;
+
 	dynamic_sensor.offset = 0.0;
 	dynamic_sensor.linearity = 1.0;
 	
 	tep_sensor.offset = 0.0;
 	tep_sensor.linearity = 1.0;
+	tep_sensor.comp2 = -0.0000015538;
+	tep_sensor.comp1 = -0.2489404356;
+	tep_sensor.comp0 = -27.3219042156;
+	tep_sensor.Pcomp2 = static_sensor.Pcomp2 = -0.0000004638;
+	tep_sensor.Pcomp1 = static_sensor.Pcomp1 =  0.9514328801;
+	tep_sensor.Pcomp0 = static_sensor.Pcomp0 =  0.1658634996;
 	
+	config.timing_log        = 0.066666666666666666666;
+	config.timing_mult       = 50;
+	config.timing_off        = 12;
 	config.output_POV_E = 0;
 	config.output_POV_P_Q = 0;
 	
@@ -514,7 +559,8 @@ int main (int argc, char **argv) {
 		
 		//initialize static pressure sensor
 		ms5611_reset(&static_sensor);
-		usleep(10000);
+		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		sensor_wait(10e3);
 		ms5611_init(&static_sensor);
 		static_sensor.secordcomp = g_secordcomp;
 		static_sensor.valid = 1;
@@ -529,7 +575,8 @@ int main (int argc, char **argv) {
 		
 		//initialize tep pressure sensor
 		ms5611_reset(&tep_sensor);
-		usleep(10000);
+                clock_gettime(CLOCK_REALTIME,&sensor_prev);
+                sensor_wait(10e3);
 		ms5611_init(&tep_sensor);
 		tep_sensor.secordcomp = g_secordcomp;
 		tep_sensor.valid = 1;
@@ -629,11 +676,15 @@ int main (int argc, char **argv) {
 			fflush(stdout);
 			sleep(1);
 		}
-				
+		
+		tep_sensor.D2f=tep_sensor.D2;
+		static_sensor.D2f=static_sensor.D2;	
 		// socket connected
 		// main data acquisition loop
 		while(sock_err >= 0)
-		{	
+		{
+			if (tj)
+				if ((++j)%1023==100) sensor_wait(250e3);
 			pressure_measurement_handler();
 			sock_err = NMEA_message_handler(sock);
 			//debug_print("Sock_err: %d\n",sock_err);

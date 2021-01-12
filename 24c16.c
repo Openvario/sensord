@@ -1,6 +1,7 @@
 
 
 #include "24c16.h"
+#include "ms5611.h"
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
@@ -31,10 +32,9 @@ int update_checksum(t_eeprom_data* data)
 
 int eeprom_read_data(t_24c16 *eeprom, t_eeprom_data *data)
 {
-	int result;
-
 	// read eeprom data to struct
-	result = eeprom_read(eeprom, (char*)data, 0x00, sizeof(*data));
+	if (eeprom_read(eeprom, (char*)data, 0x00, sizeof(*data))==1)
+		return 1;						// Failed to read the EEPROM
 	
 	// verify checksum
 	if (!verify_checksum(data))
@@ -144,7 +144,8 @@ char eeprom_write(t_24c16 *eeprom, char *s, unsigned char offset, unsigned char 
 		}
 		
 		// give EEPROM time for write ...
-		usleep(10000);
+		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		sensor_wait(10000);
 		buf[0]++;
 		s++;
 	}

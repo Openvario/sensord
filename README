@@ -1,0 +1,38 @@
+Release Notes: 
+Jan 5 2021
+
+1) It has been found that timing jitter on the MS5611 pressure sensors results in glitches.  As a result, an attempt has been made
+to reduce jitter, detect jitter, and to compensate for jitter when detected.  This compensation scheme requires the introduction
+of a new program called "compdata".  Typical usage is:
+
+/opt/bin/compdata -s -c /opt/conf/sensord.conf
+
+The program will prompt you to enter the number of data points (in thousands), up to 9999.  It should be noted that it takes roughly
+64 seconds per thousand data points (plus about 17 seconds to initialize it).  Recommendation is you choose a minimum of 5.  This 
+can be entered either with a keyboard or by use of the joystick or rotary encoders in an intuitive fashion.
+
+Upon completion of the program the configuration file (/opt/conf/sensord.conf) will have compensation data appended to it, which will
+automatically be used by sensord the next time it starts.  The configuration file should already contain default compensation data.
+Whenever the compdata is run and data is saved, it will append to the end of the config file.  Sensord will always choose the
+compensation data that appears last in the file.
+
+PLEASE NOTE that compdata will report whether it thinks values it determines are good or bad. At this point, the "good" range of
+coefficients has not yet been fully established, it's just a best guess based on my sensorboard.  
+
+The glitch detection scheme has a watchdog on it.  The watchdog "timer" is wound up whenever a glitch is detected based on the size
+of the glitch.  An underrun occurs when the watchdog timesout without detecting the end of a glitch (this could occur either
+because you are in STRONG climb/sink and not detecting the end of a glitch) or because it's not being wound up enough (this can be
+adjusted with glitch_timing in the .conf file).  An overrun occurs when the watchdog is wound up past a threshold, this occurs if 
+it's wound up too much by an individual glitch, OR if glitches are too frequent. 
+
+I'm seeing standard deviations in the range of 49 to 54.
+
+2) Another new change is in the sensorcal program.  Sensorcal is used to determine the mean offset on the pitot sensor when there 
+is no pressure differential.  Previously, sensorcal took 10 measurements, ~1 second apart and averaged them.  The data is then 
+stored on the EEPROM.  The new version will take 800 measurements, 12.5ms apart.  This should give more accurate results.
+
+3) At this point in time it is recommended that sensord, variod, and pulseaudio are run as a forked service or from the commandline.
+When run as a regular service this can make the timing jitter worse, and results in erroneous vario readings, as well as clicks and 
+pops on the audio.  It is not presently understood why this makes a difference.
+
+-------------------------------------------------------------------------------------------------------------------------------------

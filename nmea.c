@@ -79,7 +79,7 @@ int Compose_Pressure_POV_slow(char *sentence, float static_pressure, float dynam
 	}
 
 	// compose NMEA String
-	length = sprintf(sentence, "$POV,P,%+07.2f,Q,%+05.2f", static_pressure, (dynamic_pressure)); 
+	length = sprintf(sentence, "$POV,P,%+07.4f,Q,%+05.2f", static_pressure, (dynamic_pressure)); 
 	
 	// Calculate NMEA checksum and add to string
 	sprintf(sentence + length, "*%02X\r\n", NMEA_checksum(sentence));
@@ -126,7 +126,7 @@ int Compose_Pressure_POV_fast(char *sentence, float te_vario)
 	}
 	
 	// compose NMEA String
-	length = sprintf(sentence, "$POV,E,%+05.2f", te_vario); 
+	length = sprintf(sentence, "$POV,E,%+05.4f", te_vario); 
 	
 	// Calculate NMEA checksum and add to string
 	sprintf(sentence + length, "*%02X\r\n", NMEA_checksum(sentence));
