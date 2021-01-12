@@ -249,7 +249,7 @@ void pressure_measurement_handler(int record)
 void polyfit (double val[][3], int idx, double pf[], double rmserr[])
 {
 	int i;
-	double  x[4], y[3], tmp, inv[3][3];
+	double  x[4], y[3], inv[3][3];
 	double det,cor,meanval,det2;
 
 	for (i=0;i<3;++i) x[i]=y[i]=0;
@@ -257,7 +257,7 @@ void polyfit (double val[][3], int idx, double pf[], double rmserr[])
 	for (i=0;i<idx;++i) {
 		x[0]+=val[i][1];
 		y[0]+=val[i][0];
-		tmp=val[i][1]*val[i][1];
+		double tmp=val[i][1]*val[i][1];
 		x[1]+=tmp;
 		x[2]+=tmp*val[i][1];
 		x[3]+=tmp*tmp;

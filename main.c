@@ -252,10 +252,10 @@ int NMEA_message_handler(int sock, int valid_temp)
 */ 
 void pressure_measurement_handler(void)
 {
-	static int meas_counter = 1, glitch = 0, glitchstart=0, deltaxmax=0,shutoff=0;
+	static int meas_counter = 1, glitch = 0, deltaxmax=0,shutoff=0;
 	static struct timespec kalman_cur, kalman_prev;
-	int deltax,reject=0;
-	double correction, cor2;
+	int reject=0;
+	double cor2;
 
 	// Initialize timers if first time through.
 	if (meas_counter==1) clock_gettime(CLOCK_REALTIME,&kalman_prev);
@@ -268,7 +268,11 @@ void pressure_measurement_handler(void)
 	}
 
 	if (io_mode.sensordata_from_file != TRUE) 
-	{
+	{	
+		static int glitchstart = 0;
+		int deltax;
+		double correction;
+
 		// read AMS5915
 		ams5915_measure(&dynamic_sensor);
 
@@ -279,6 +283,8 @@ void pressure_measurement_handler(void)
 		if ((sensor_wait(12500))>2000) { glitchstart=8; glitch+=8; }
 		if (meas_counter&1) {
 			// read pressure sensors
+			int deltax;
+
 			ms5611_read_temp(&tep_sensor,glitch);
 			ms5611_read_pressure(&static_sensor);
 			ms5611_start_pressure(&tep_sensor);
@@ -302,6 +308,8 @@ void pressure_measurement_handler(void)
 
 			// if there was a glitch, compensate for the glitch
 			if (glitch) {	
+				double correction;
+
 				if (--glitch>350) glitch=350;
 				if ((++shutoff)>399) { 
 					shutoff=glitch=0;
@@ -323,6 +331,8 @@ void pressure_measurement_handler(void)
 			ms5611_calculate_pressure(&static_sensor);
 		} else {
 			// read pressure sensors
+			int deltax;
+
 			ms5611_read_pressure(&tep_sensor);
 			ms5611_read_temp(&static_sensor,glitch);
 			ms5611_start_temp(&tep_sensor);
@@ -347,6 +357,8 @@ void pressure_measurement_handler(void)
 			// if there was a glitch, compensate for the glitch
 			if (glitch) 
 			{
+				double correction;
+
 				if (--glitch>350) glitch=350;
 				// compensate for the glitch
 				deltax = (int) static_sensor.D2f-(int) static_sensor.D2;
