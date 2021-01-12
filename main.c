@@ -41,6 +41,7 @@
 
 #include "cmdline_parser.h"
 
+#include "ds2482.h"
 #include "ms5611.h"
 #include "ams5915.h"
 #include "ads1110.h"
@@ -66,7 +67,8 @@ t_ms5611 static_sensor;
 t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
 t_ads1110 voltage_sensor;
-	
+t_ds2482 temp_sensor;
+
 // configuration object
 t_config config;
 
@@ -139,7 +141,7 @@ void sigintHandler(int sig_num){
 * @date 17.04.2014 born
 *
 */ 
-int NMEA_message_handler(int sock)
+int NMEA_message_handler(int sock, int valid_temp)
 {
 	// some local variables
 	float vario;
@@ -147,6 +149,17 @@ int NMEA_message_handler(int sock)
 	static int nmea_counter = 1;
 	int result;
 	char s[256];
+
+	if (valid_temp>1) {
+		// Compose POV NMEA sentences
+		result=Compose_Temperature_POV(&s[0], temp_sensor.temperature);
+ 		// printf ("temp: %f\n",temp_sensor.temperature);
+		// // NMEA sentence valid ?? Otherwise print some error !!
+		if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
+		// Send NMEA string via socket to XCSoar
+		// send complete sentence including terminating '\0'
+		if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0) fprintf(stderr, "send failed\n");
+	}
 	
 	if ((nmea_counter++)%4==0)
 	{
@@ -398,12 +411,48 @@ void pressure_measurement_handler(void)
 	}
 	meas_counter++;
 }
-	
+
+int temperature_measurement_handler(void)
+{
+
+	static int temp_counter = 0,done=0;
+
+	if (temp_sensor.present) {
+		if (temp_counter==0) {
+			if (OWReset(&temp_sensor)==1) { // Reset
+				if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
+					OWWriteByte(&temp_sensor,0x44); // Initiate Conversion
+				}
+			}
+			temp_counter=1;
+			done=0;
+		} else {
+			if (!done) {
+				if (OWReadByte(&temp_sensor)>0) {
+					if (OWReset(&temp_sensor)==1) {  // Reset
+						if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
+							if (OWWriteByte(&temp_sensor,0xBE)==1) { //Read Scratchpad
+								OWReadTemperature(&temp_sensor); // Convert output to temperature
+								done = temp_sensor.valid+1;
+							}
+						}
+					}
+				}
+			}
+			if (++temp_counter>=temp_sensor.rollover) {
+				if (done) temp_counter=0;
+					else if (temp_counter>temp_sensor.maxrollover) temp_counter=0;
+			} else if (done==1) temp_counter=0;
+		}
+	}
+	return done;
+}
+
 int main (int argc, char **argv) {
 	
 	// local variables
-	int i = 0,j = 0;
-	int result;
+	int i = 0, j = 0;
+	int result, valid_temp;
 	int sock_err = 0;
 
 	t_24c16 eeprom;
@@ -448,6 +497,10 @@ int main (int argc, char **argv) {
 	config.output_POV_E = 0;
 	config.output_POV_P_Q = 0;
 	
+	temp_sensor.rollover = ((int) (round(80/TEMP_SAMPLE_RATE)));
+	temp_sensor.maxrollover = 100;
+	temp_sensor.databits = 10;
+
 	//open file for raw output
 	//fp_rawlog = fopen("raw.log","w");
 		
@@ -456,7 +509,7 @@ int main (int argc, char **argv) {
 	
 	// get config file options
 	if (fp_config != NULL)
-		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &config);
+		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &temp_sensor, &config);
 	
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
@@ -596,6 +649,21 @@ int main (int argc, char **argv) {
 			fprintf(stderr, "Open voltage sensor failed !!\n");
 		}
 		
+
+		// open temperature sensor and initialize
+		if (config.output_POV_T == 1) {
+			printf ("Opening Temperature Sensor\n");
+			if (!ds2482_open(&temp_sensor,0x18))
+				fprintf (stderr,"DS2482 Interface failure\n");
+			else {
+				ds2482_reset(&temp_sensor);
+				if (OWConfigureBits(&temp_sensor)) {
+					temp_sensor.present=1;
+					printf ("DS18B20 Temperature Sensor present\n");
+				} else fprintf (stderr,"DS18B20 sensor failed!\n");
+			}
+		}
+		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
 		dynamic_sensor.valid = 1;
@@ -686,7 +754,8 @@ int main (int argc, char **argv) {
 			if (tj)
 				if ((++j)%1023==100) sensor_wait(250e3);
 			pressure_measurement_handler();
-			sock_err = NMEA_message_handler(sock);
+			valid_temp=temperature_measurement_handler();
+			sock_err = NMEA_message_handler(sock,valid_temp);
 			//debug_print("Sock_err: %d\n",sock_err);
 		
 		} 

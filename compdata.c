@@ -37,6 +37,7 @@
 //#include "version.h"
 //#include "w1.h"
 #include "def.h"
+#include "ds2482.h"
 #include "ms5611.h"
 #include "ams5915.h"
 #include "ads1110.h"
@@ -59,6 +60,7 @@ t_ms5611 static_sensor;
 t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
 t_ads1110 voltage_sensor;
+t_ds2482 temp_sensor;
 
 t_config config;
 t_io_mode io_mode;
@@ -325,7 +327,7 @@ int main (int argc, char **argv) {
 
 	// get config file options
 	if (fp_config != NULL)
-		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &config);
+		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &temp_sensor, &config);
 	
 	// check if we are a daemon or stay in foreground
 	// stay in foreground

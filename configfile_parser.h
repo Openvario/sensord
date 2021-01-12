@@ -21,10 +21,11 @@ typedef struct {
 	char output_POV_E;
 	char output_POV_P_Q;
 	char output_POV_V;
+	char output_POV_T;
 	float vario_x_accel;
 	double timing_log;
 	double timing_mult;
 	double timing_off;
 } t_config;
 
-int cfgfile_parser(FILE *, t_ms5611 *, t_ms5611 *, t_ams5915 *, t_ads1110 *, t_config *);
+int cfgfile_parser(FILE *, t_ms5611 *, t_ms5611 *, t_ams5915 *, t_ads1110 *, t_ds2482 *, t_config *);
