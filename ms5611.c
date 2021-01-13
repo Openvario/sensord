@@ -38,21 +38,21 @@ extern FILE *fp_console;
 
 float sensor_wait (float time)
 {
-	struct timespec curtime;
-	float deltaTime;
+        struct timespec curtime;
 
 	clock_gettime(CLOCK_REALTIME,&curtime);
-	deltaTime=DELTA_TIME_US(curtime,sensor_prev);
-	if (time-deltaTime>2000) usleep(time-deltaTime);
-	while (deltaTime<time) 
-	{
-		usleep(50);
-		clock_gettime(CLOCK_REALTIME,&curtime);
-		deltaTime=DELTA_TIME_US(curtime,sensor_prev);
-	} 
-	return (deltaTime-time);
+	curtime.tv_nsec=((long int) time)*1000 - (curtime.tv_nsec+(curtime.tv_sec-sensor_prev.tv_sec)*1e9 - sensor_prev.tv_nsec);
+	if (curtime.tv_nsec>1e9) { 
+		curtime.tv_sec=curtime.tv_nsec/1e9; 
+		curtime.tv_nsec-=curtime.tv_sec*1e9; 
+	} else {
+		curtime.tv_sec=0;
+		if (curtime.tv_nsec<0) curtime.tv_nsec=0;
+	}
+	while (nanosleep(&curtime,&curtime)) ;
+	clock_gettime(CLOCK_REALTIME,&curtime);
+	return (DELTA_TIME_US(curtime,sensor_prev)-time);
 }
-
 
 /**
 * @brief Establish connection to MS5611 pressure sensor
