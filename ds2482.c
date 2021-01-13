@@ -84,7 +84,6 @@ int ds2482_reset(t_ds2482 *sensor) {
 int OWReset(t_ds2482 *sensor) {
 	int i;
 	unsigned char data;
-	struct timespec nstime;
 
 	// server.log("Function: I2C Reset");
 	if (write(sensor->fd, "\xb4",1)!=1) { // 1-wire reset
@@ -99,8 +98,7 @@ int OWReset(t_ds2482 *sensor) {
 		} else {
 			// server.log(format("Read Status Byte = %d", data[0]));
 			if (data & 1) { // 1-Wire Busy bit
-				nstime.tv_sec=0;
-				nstime.tv_nsec=1e6;
+				struct timespec nstime = {0,1e6};
 				while (nanosleep(&nstime,&nstime)) ; // Wait, try again
 			} else {
 				// server.log("One-Wire bus is idle");
@@ -143,7 +141,9 @@ int OWWriteByte(t_ds2482 *sensor, unsigned char writeval) {
 			// server.log(format("Read Status Byte = %d", data[0]));
 			if (data[0] & 0x01) { // 1-Wire Busy bit
 				// server.log("One-Wire bus is busy");
-				usleep(1000);//Wait, try again
+				struct timespec nstime = {0,1e6};
+				while (nanosleep(&nstime,&nstime)) ; // Wait, try again
+
 			} else {
 				// server.log("One-Wire bus is idle");
 				break;
@@ -169,7 +169,9 @@ int OWWriteByte(t_ds2482 *sensor, unsigned char writeval) {
 			// server.log(format("Read Status Byte = %d", data[0]));
 			if (data[0] & 1) { // 1-Wire Busy bit
 				// server.log("One-Wire bus is busy");
-				usleep(1000); // Wait, try again
+				struct timespec nstime = {0,1e6};  
+				while (nanosleep(&nstime,&nstime)) ; // Wait, try again
+
 			} else {
 				// server.log("One-Wire bus is idle");
 				break;
@@ -207,7 +209,8 @@ int OWReadByte(t_ds2482 *sensor) {
 			// server.log(format("Read Status Byte = %d", data));
 			if (data & 0x01) { // 1-Wire Busy bit
 				// server.log("One-Wire bus is busy");
-				usleep(1000); // Wait, try again
+                                struct timespec nstime = {0,1e6};
+				while (nanosleep(&nstime,&nstime)) ; // Wait, try again
 			} else {
 				// server.log("One-Wire bus is idle");
 				break;
@@ -231,7 +234,8 @@ int OWReadByte(t_ds2482 *sensor) {
 			// server.log(format("Read Status Byte = %d", data));
 			if (data & 1) { // 1-Wire Busy bit
 				// server.log("One-Wire bus is busy");
-				usleep(1000); // Wait, try again
+                                struct timespec nstime = {0,1e6};
+				while (nanosleep(&nstime,&nstime)) ; // Wait, try again
 			} else {
 				// server.log("One-Wire bus is idle");
 				break;
@@ -275,7 +279,8 @@ int OWTriplet(t_ds2482 *sensor) {
 			// server.log(format("Read Status Byte = %d", data[0]));
 			if (data[0] & 1) { // 1-Wire Busy bit
 				// server.log("One-Wire bus is busy");
-				usleep(1000); // Wait, try again
+                                struct timespec nstime = {0,1e6};
+				while (nanosleep(&nstime,&nstime)) ; // Wait, try again
 			} else {
 				// server.log("One-Wire bus is idle");
 				sensor->owTriplet=(data[0]>>5)&7;            
