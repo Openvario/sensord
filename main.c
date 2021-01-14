@@ -158,7 +158,7 @@ int NMEA_message_handler(int sock, int valid_temp)
 		if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
 		// Send NMEA string via socket to XCSoar
 		// send complete sentence including terminating '\0'
-		if ((sock_err = send(sock, s, strlen(s)+1, 0)) < 0) fprintf(stderr, "send failed\n");
+		if ((sock_err = send(sock, s, strlen(s), 0)) < 0) fprintf(stderr, "send failed\n");
 	}
 	
 	if ((nmea_counter++)%4==0)
