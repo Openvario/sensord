@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 
 #include "def.h"
 
@@ -36,7 +37,7 @@ extern FILE *fp_console;
 int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_ams5915 *dynamic_sensor, t_ads1110 *voltage_sensor, t_ds2482 *temp_sensor, t_config *config)
 {
 	char line[70];
-	char tmp[20];
+	char tmp[20],tmp2[20];
 	float data;
 		
 	// is config file used ??
@@ -80,10 +81,17 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					// check for output of POV_T sentence
                 	                if (strcmp(tmp,"output_POV_T") == 0)
                         	        {
-                                	        config->output_POV_T= 1;
+                                	        config->output_POV_T = 1;
                                         	//printf("OUTput POV_T enabled !! \n");
 	                                }
 	
+                                       // check for output of POV_H sentence
+                                        if (strcmp(tmp,"output_POV_H") == 0)
+                                        {
+                                                config->output_POV_H = 1;
+                                                //printf("OUTput POV_H enabled !! \n");
+                                        }
+
 					// check for static_sensor
 					if (strcmp(tmp,"static_sensor") == 0)
 					{
@@ -91,7 +99,28 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 						sscanf(line, "%19s %f %f", tmp, &static_sensor->offset, &static_sensor->linearity);
 						static_sensor->offset*=16;
 					}
-	
+
+					// check for temp_sensor_type
+					if (strcmp(tmp,"temp_sensor_type") == 0)
+					{
+						// get config data for temp sensor type
+						sscanf(line, "%19s %19s", tmp, tmp2);
+						char *s = tmp2;
+						while (*s) {
+							*s = toupper((unsigned char) *s);
+							s++;
+						}
+						if (!strcmp(tmp2,"AUTO")) temp_sensor->sensor_type=AUTO;
+						else if (!strcmp(tmp2,"HTU21D")) temp_sensor->sensor_type=HTU21D;
+							else if (!strcmp(tmp2,"HTU31D")) temp_sensor->sensor_type=HTU31D;
+								else if (!strcmp(tmp2,"SHT85")) temp_sensor->sensor_type=SHT85;
+									else if (!strcmp(tmp2,"SHT4X")) temp_sensor->sensor_type=SHT4X;
+										else if (!strcmp(tmp2,"SI7021")) temp_sensor->sensor_type=SI7021;
+											else if (!strcmp(tmp2,"DS18B20")) temp_sensor->sensor_type=DS18B20;
+												else if (!strcmp(tmp2,"AM2321")) temp_sensor->sensor_type=AM2321;
+													else printf ("Invalid sensor type.  Supported types are: auto, htu21d, htu31d, sht4x, sht85, si7021, ds18b20, and am2321 !!\n");
+					}
+
 					if (strcmp(tmp,"static_comp") == 0)
 					{
 						// get compensation data for static sensor
@@ -154,13 +183,9 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					}
 	
 					// check for temperature sensor config
-					if (strcmp(tmp,"temp_config") == 0) {
+					if (strcmp(tmp,"temp_databits") == 0) {
 						// get config data for temperature sensor
 						sscanf(line,"%19s %d",tmp, &temp_sensor->databits);
-						if ((temp_sensor->databits<9) || (temp_sensor->databits>12)) {
-							printf ("Temperature sensor databits (%d) is not valid, must be in the range of 9-12.  Using default value of 10 bits.\n",temp_sensor->databits);
-							temp_sensor->databits=10;
-						}
 					}
 	
 					// check for temperature sensor sample rate

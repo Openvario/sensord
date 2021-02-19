@@ -38,10 +38,9 @@
 //#include "w1.h"
 #include "def.h"
 #include "KalmanFilter1d.h"
-
 #include "cmdline_parser.h"
-
 #include "ds2482.h"
+#include "humidity.h"
 #include "ms5611.h"
 #include "ams5915.h"
 #include "ads1110.h"
@@ -68,6 +67,7 @@ t_ms5611 tep_sensor;
 t_ams5915 dynamic_sensor;
 t_ads1110 voltage_sensor;
 t_ds2482 temp_sensor;
+
 
 // configuration object
 t_config config;
@@ -141,7 +141,7 @@ void sigintHandler(int sig_num){
 * @date 17.04.2014 born
 *
 */ 
-int NMEA_message_handler(int sock, int valid_temp)
+int NMEA_message_handler(int sock)
 {
 	// some local variables
 	float vario;
@@ -150,15 +150,23 @@ int NMEA_message_handler(int sock, int valid_temp)
 	int result;
 	char s[256];
 
-	if (valid_temp>1) {
+	if (temp_sensor.temp_valid) {
 		// Compose POV NMEA sentences
 		result=Compose_Temperature_POV(&s[0], temp_sensor.temperature);
  		// printf ("temp: %f\n",temp_sensor.temperature);
 		// // NMEA sentence valid ?? Otherwise print some error !!
 		if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
-		// Send NMEA string via socket to XCSoar
-		// send complete sentence including terminating '\0'
-		if ((sock_err = send(sock, s, strlen(s), 0)) < 0) fprintf(stderr, "send failed\n");
+		// Send NMEA string via socket to XCSoar send complete sentence including terminating '\0'
+		if ((sock_err = send(sock, s, strlen(s), 0)) < 0) fprintf(stderr, "send failed %s\n",s);
+	}
+	if (temp_sensor.humidity_valid) {
+		// Compose POV NMEA sentences
+		result=Compose_Humidity_POV(&s[0], temp_sensor.humidity);
+		// printf ("humid: %f\n",temp_sensor.humidity);
+		// NMEA sentence valid ?? Otherwise print some error !!
+		if (result != 1) printf("POV Humidity NMEA Result = %d\n",result);
+		// Send NMEA string via socket to XCSoar send complete sentence including terminating '\0'
+		if ((sock_err = send(sock, s, strlen(s), 0)) < 0) fprintf(stderr, "send failed %s\n",s);  
 	}
 	
 	if ((nmea_counter++)%4==0)
@@ -175,11 +183,10 @@ int NMEA_message_handler(int sock, int valid_temp)
 			{
 				printf("POV slow NMEA Result = %d\n",result);
 			}	
-
 			// Send NMEA string via socket to XCSoar
 			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
 			{	
-				fprintf(stderr, "send failed\n");
+			  fprintf(stderr, "send failed %s\n",s);
 				return sock_err;
 			}
 		}
@@ -197,7 +204,6 @@ int NMEA_message_handler(int sock, int valid_temp)
 			{
 				printf("POV fast NMEA Result = %d\n",result);
 			}	
-
 			// Send NMEA string via socket to XCSoar
 			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
 			{	
@@ -217,11 +223,10 @@ int NMEA_message_handler(int sock, int valid_temp)
 			{
 				printf("POV voltage NMEA Result = %d\n",result);
 			}	
-
 			// Send NMEA string via socket to XCSoar
 			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
 			{	
-				fprintf(stderr, "send failed\n");
+			  fprintf(stderr, "send failed %s\n",s);
 				return sock_err;
 			}
 		}
@@ -423,49 +428,90 @@ void pressure_measurement_handler(void)
 	meas_counter++;
 }
 
-int temperature_measurement_handler(void)
+void temperature_measurement_handler(void)
 {
+	static int done = 0, temp_counter = 0, rollover=0;
 
-	static int done = 0;
-
-	if (temp_sensor.present) {
-		static int temp_counter = 0;
-		if (temp_counter==0) {
-			if (OWReset(&temp_sensor)==1) { // Reset
-				if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
-					OWWriteByte(&temp_sensor,0x44); // Initiate Conversion
-				}
-			}
-			temp_counter=1;
-			done=0;
-		} else {
-			if (!done) {
-				if (OWReadByte(&temp_sensor)>0) {
-					if (OWReset(&temp_sensor)==1) {  // Reset
-						if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
-							if (OWWriteByte(&temp_sensor,0xBE)==1) { //Read Scratchpad
-								OWReadTemperature(&temp_sensor); // Convert output to temperature
-								done = temp_sensor.valid+1;
+	temp_sensor.temp_valid=temp_sensor.humidity_valid=0;
+	if (temp_sensor.temp_present|temp_sensor.humidity_present) {
+		switch (temp_sensor.sensor_type) {
+			case DS18B20 :
+				if (temp_sensor.temp_present) {
+					if (temp_counter==0) {
+						if (OWReset(&temp_sensor)==1) { // Reset
+							if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
+								OWWriteByte(&temp_sensor,0x44); // Initiate Conversion
 							}
 						}
+						temp_counter=1;
+						done=0;
+					} else {
+						if (!done) {
+							if (OWReadByte(&temp_sensor)>0) {
+								if (OWReset(&temp_sensor)==1) {  // Reset
+									if (OWWriteByte(&temp_sensor,0xCC)==1) { // Skip ROM
+										if (OWWriteByte(&temp_sensor,0xBE)==1) { //Read Scratchpad
+											OWReadTemperature(&temp_sensor); // Convert output to temperature
+											done = temp_sensor.temp_valid+1;
+										}
+									}
+								}
+							}
+						}
+						if (++temp_counter>=temp_sensor.rollover) {
+							if (done) temp_counter=0;
+								else if (temp_counter>temp_sensor.maxrollover) temp_counter=0;
+						} else if (done==1) temp_counter=0;
 					}
 				}
-			}
-			if (++temp_counter>=temp_sensor.rollover) {
-				if (done) temp_counter=0;
-					else if (temp_counter>temp_sensor.maxrollover) temp_counter=0;
-			} else if (done==1) temp_counter=0;
+				break;
+			case AM2321 :
+				if (++temp_counter>=temp_sensor.rollover) {
+					if (!am2321_read(&temp_sensor)) done=temp_sensor.temp_valid+1;
+					temp_counter=0;
+				} 
+				break;
+			case HTU21D :
+				if (temp_counter==0) {
+					if ((temp_sensor.humidity_present) && (rollover)) {
+						si7021_read_humidity(&temp_sensor);
+						printf ("Humidity: %f\n",temp_sensor.humidity);
+					}
+					if (temp_sensor.temp_present) si7021_start_temp(&temp_sensor);
+					if (temp_sensor.temp_valid) temp_sensor.compensate=1; else temp_sensor.compensate=0;
+				}
+				if (temp_counter==temp_sensor.rollover/2) {
+					if (temp_sensor.temp_present) {
+						si7021_read_temp(&temp_sensor);
+						printf ("Temperature: %f\n",temp_sensor.temperature);
+					}
+					if (temp_sensor.humidity_present) si7021_start_humidity(&temp_sensor);
+				}
+				if (++temp_counter>=temp_sensor.rollover) {
+					temp_counter=0;
+					rollover=1;
+				}
+				break;
+			case HTU31D : case SI7021 : case SHT4X : case SHT85 :
+				if (temp_counter==0) {
+                                        if (rollover) si7021_read_humidity(&temp_sensor);
+                                        si7021_start_humidity(&temp_sensor);
+                                }
+                                if (++temp_counter>=temp_sensor.rollover) {
+                                        temp_counter=0;
+                                        rollover=1;
+                                }
+                                break;
+
 		}
 	}
-	return done;
 }
 
 int main (int argc, char **argv) {
 	
 	// local variables
 	int i = 0, j = 0;
-	int result, valid_temp;
-	int sock_err = 0;
+	int result;
 
 	t_24c16 eeprom;
 	t_eeprom_data data;
@@ -479,10 +525,6 @@ int main (int argc, char **argv) {
 	
 	// signals and action handlers
 	struct sigaction sigact;
-	
-	// socket communication
-	int sock;
-	struct sockaddr_in server;
 	
 	// initialize variables
 	static_sensor.offset = 0.0;
@@ -506,12 +548,9 @@ int main (int argc, char **argv) {
 	config.timing_log        = 0.066666666666666666666;
 	config.timing_mult       = 50;
 	config.timing_off        = 12;
-	config.output_POV_E = 0;
-	config.output_POV_P_Q = 0;
+	config.output_POV_E      = config.output_POV_P_Q = config.output_POV_T = config.output_POV_H = 0;
 	
-	temp_sensor.rollover = ((int) (round(80/TEMP_SAMPLE_RATE)));
-	temp_sensor.maxrollover = 100;
-	temp_sensor.databits = 10;
+	temp_sensor.rollover = temp_sensor.maxrollover = temp_sensor.databits = temp_sensor.sensor_type = temp_sensor.compensate = 0;
 
 	//open file for raw output
 	//fp_rawlog = fopen("raw.log","w");
@@ -661,21 +700,166 @@ int main (int argc, char **argv) {
 			fprintf(stderr, "Open voltage sensor failed !!\n");
 		}
 		
-
 		// open temperature sensor and initialize
-		if (config.output_POV_T == 1) {
-			printf ("Opening Temperature Sensor\n");
-			if (!ds2482_open(&temp_sensor,0x18))
-				fprintf (stderr,"DS2482 Interface failure\n");
-			else {
-				ds2482_reset(&temp_sensor);
-				if (OWConfigureBits(&temp_sensor)) {
-					temp_sensor.present=1;
-					printf ("DS18B20 Temperature Sensor present\n");
-				} else fprintf (stderr,"DS18B20 sensor failed!\n");
+		if (config.output_POV_T|config.output_POV_H) {
+			int autodetect=0,x=1;
+			switch (temp_sensor.sensor_type) { 
+				case AUTO : printf ("Autodetecting temperature/humidity sensor\n");
+					    autodetect=1;
+				case DS18B20 :
+					if (!ds2482_open(&temp_sensor,0x18))
+						fprintf (stderr,"DS2482 interface failure !!\n");
+					else {
+						ds2482_reset(&temp_sensor);
+						if (OWConfigureBits(&temp_sensor)) {
+							temp_sensor.temp_present=config.output_POV_T;
+							temp_sensor.humidity_present=0;
+							printf ("DS18B20 temperature sensor present\n");
+							temp_sensor.sensor_type=DS18B20;
+							autodetect=0;
+							if (temp_sensor.rollover==0) {
+								temp_sensor.rollover=80;
+								temp_sensor.maxrollover=100;
+							}
+						} else {
+							if (!autodetect) fprintf (stderr,"Open DS18B20 sensor failed!\n"); 
+							else printf ("DS18B20 temperature sensor not detected\n");
+							close (temp_sensor.fd);
+						}
+					}
+					if (!autodetect) break;
+				case AM2321 :
+					if (am2321_open(&temp_sensor,0x5c)) {
+                                		if (!autodetect) fprintf (stderr,"Open AM2321 temperature/humidity Sensor failed !!\n"); else
+						printf ("AM2321 temperature/humidity sensor not detected\n");
+					} else {
+						printf ("AM2321 temperature/humidity sensor present\n");
+						temp_sensor.humidity_present=config.output_POV_H;
+						temp_sensor.temp_present=config.output_POV_T;
+						temp_sensor.sensor_type=AM2321;
+						if (temp_sensor.rollover==0) temp_sensor.rollover=160;
+						autodetect=0;
+					}
+					if (!autodetect) break;
+				case SHT4X : case SHT85 :
+					switch (sht4x_open(&temp_sensor,0x45)) {
+						case 0 : printf ("sensor present\n");
+							 temp_sensor.humidity_present=config.output_POV_H;
+							 temp_sensor.temp_present=config.output_POV_T;
+							 if (temp_sensor.rollover==0) temp_sensor.rollover=80;
+							 autodetect=0;
+							 x=0;
+							 break;
+						case 3 : printf ("SHT4X sensor may be detected on 0x45, but not working\n");
+							 fprintf (stderr,"SHT4X sensor may be detected on 0x45, but not working\n");
+							 break;
+						case 4 : if ((temp_sensor.sensor_type)==SHT4X) {
+								 printf ("SHT4X sensor detected on 0x45, but failed to read serial number\n");
+								 fprintf (stderr,"SHT4X sensor detected on 0x45, but failed to read serial nunber\n");
+							 }
+							 temp_sensor.humidity_present=config.output_POV_H;
+							 temp_sensor.temp_present=config.output_POV_T;
+							 if (temp_sensor.rollover==0) temp_sensor.rollover=80;
+							 autodetect=0;
+							 break;
+						default : break;
+					}
+					if (x) 
+						switch (sht4x_open(&temp_sensor,0x44)) {
+						  	case 0 : printf ("sensor present\n");
+								 temp_sensor.humidity_present=config.output_POV_H;
+								 temp_sensor.temp_present=config.output_POV_T;
+								 if (temp_sensor.rollover==0) temp_sensor.rollover=80;
+								 autodetect=0;
+								 x=0;
+							break;
+							case 3 : printf ("SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
+						 		 fprintf (stderr,"SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
+						 		 break;
+							case 4 : if ((temp_sensor.sensor_type)==SHT4X) {
+								 	printf ("SHT4X sensor detected on 0x44, but failed to read serial number\n");
+									fprintf (stderr,"SHT4X sensor detected on 0x44, but failed to read serial nunber\n");
+								 } else { 
+									printf ("SHT85 sensor detected, but failed to read serial number\n");
+									fprintf (stderr,"SHT85 sensor detected, but failed to read serial number\n");
+								 }
+								 temp_sensor.humidity_present=config.output_POV_H;
+								 temp_sensor.temp_present=config.output_POV_T;
+								 if (temp_sensor.rollover==0) temp_sensor.rollover=80;
+								 autodetect=0;
+								 break;
+							default : if (!autodetect) fprintf (stderr,"Open SHT4X/SHT85 temperature/humidity sensor failed !!\n"); else
+									  printf ("SHT4X/SHT85 tenperature/humidity sensor not detected\n");
+						}
+					if (!autodetect) break;
+				case SI7021 : case HTU21D : case HTU31D :
+					if ((temp_sensor.sensor_type!=HTU21D) && (temp_sensor.sensor_type!=SI7021)) {
+						switch (si7021_open(&temp_sensor,0x41)) {
+							case 0 : printf ("sensor present on 0x41\n");
+								temp_sensor.humidity_present=config.output_POV_H;
+								temp_sensor.temp_present=config.output_POV_T;
+								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
+								autodetect=0;
+								x=0;
+								break;
+							case 3 : fprintf (stderr,"HTU31D may be detected on 0x41, but not working\n");
+								printf ("HTU31D sensor may be detected on 0x41, but not working\n");
+								break;
+							case 4 : printf ("HTU31D sensor detected on 0x41, but failed to read serial number\n");
+								 fprintf (stderr,"HTU31D sensor detected on 0x41, but failed to read serial number\n");
+								temp_sensor.humidity_present=config.output_POV_H;
+								temp_sensor.temp_present=config.output_POV_T;
+								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
+								autodetect=0;
+								break;
+							default : break;
+						}
+					}
+					if (x) 
+						switch (si7021_open(&temp_sensor,0x40)) {
+							case 0 : printf ("sensor present on 0x40\n");
+								 temp_sensor.humidity_present=config.output_POV_H;
+								 temp_sensor.temp_present=config.output_POV_T;
+								 if (temp_sensor.rollover==0) {
+									 if (temp_sensor.sensor_type==HTU21D) temp_sensor.rollover=40; else temp_sensor.rollover=80;
+								 }
+								 autodetect=0;
+								 break;
+							case 3 : printf ("HTU31D sensor may be detected on 0x40, but not working\n");
+								 fprintf (stderr,"HTU31D sensor may be detected on 0x40, but not working\n"); 
+								 break;
+							case 4 : printf ("HTU31D sensor detected on 0x40, but failed to read serial number\n");
+								 fprintf (stderr,"HTU31D sensor detected on 0x40, but failed to read serial number\n");
+								temp_sensor.humidity_present=config.output_POV_H;
+								temp_sensor.temp_present=config.output_POV_T;
+								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
+								autodetect=0;
+								break;
+							case 6 : printf ("SI7021/HTU21D detected but failed to read serial number\n");
+								fprintf (stderr, "SI7021/HTU21D detected but failed to read serial number\n");
+								temp_sensor.humidity_present=config.output_POV_H;
+								temp_sensor.temp_present=config.output_POV_T;
+								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
+								autodetect=0;
+								break;
+							case 7 : printf ("failed to read firmware revision\n");
+								fprintf (stderr, "SI7021 detected but failed to read firmware revision\n");
+								temp_sensor.humidity_present=config.output_POV_H;
+								temp_sensor.temp_present=config.output_POV_T;
+								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
+                                                        	autodetect=0;
+								break;
+							case 2 : case 5 : default : 
+								if (!autodetect) fprintf (stderr,"Open SI7021/HTU21D/HTU31D temperature/humidity sensor failed !!\n"); else
+								printf ("SI7021/HTU21D/HTU31D tenperature/humidity sensor not detected\n");
+						}
+					if (!autodetect) break;
+				default : 
+					config.output_POV_T=config.output_POV_H=0;
+					break;
 			}
+			if (autodetect) printf ("No temperature/humidity sensor detected !!\n");
 		}
-		
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
 		dynamic_sensor.valid = 1;
@@ -732,23 +916,22 @@ int main (int argc, char **argv) {
 	// initialize kalman filter
 	KalmanFilter1d_reset(&vkf);
 	vkf.var_x_accel_ = config.vario_x_accel;
-
 	for(i=0; i < 1000; i++)
 		KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, 25e-3);
 	while(1)
 	{
-		// reset sock_err variables
-		sock_err = 0;
-		
+		// socket communication
+		int sock;
+		struct sockaddr_in server;
+		int sock_err = 0;
+
 		// Open Socket for TCP/IP communication
 		sock = socket(AF_INET, SOCK_STREAM, 0);
-		if (sock == -1)
-			fprintf(stderr, "could not create socket\n");
-  
+		if (sock == -1) fprintf(stderr, "could not create socket\n");
 		server.sin_addr.s_addr = inet_addr("127.0.0.1");
 		server.sin_family = AF_INET;
 		server.sin_port = htons(4353);
-		
+	
 		// try to connect to XCSoar
 		while (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) 
 		{
@@ -756,7 +939,6 @@ int main (int argc, char **argv) {
 			fflush(stdout);
 			sleep(1);
 		}
-		
 		tep_sensor.D2f=tep_sensor.D2;
 		static_sensor.D2f=static_sensor.D2;	
 		// socket connected
@@ -766,8 +948,8 @@ int main (int argc, char **argv) {
 			if (tj)
 				if ((++j)%1023==100) sensor_wait(250e3);
 			pressure_measurement_handler();
-			valid_temp=temperature_measurement_handler();
-			sock_err = NMEA_message_handler(sock,valid_temp);
+			temperature_measurement_handler();
+			sock_err = NMEA_message_handler(sock);
 			//debug_print("Sock_err: %d\n",sock_err);
 		
 		} 

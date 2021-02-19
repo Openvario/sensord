@@ -75,8 +75,8 @@ int ds2482_reset(t_ds2482 *sensor) {
 	sensor->owTriplet=4;
 	sensor->owLastDevice=0;
 	sensor->owLastDiscrepancy=0;
-	sensor->present=0;
-	sensor->valid=0;
+	sensor->temp_present=0;
+	sensor->temp_valid=0;
 	sensor->temperature=23;
 	return 1;
 }
@@ -302,7 +302,7 @@ int OWSearch(t_ds2482 *sensor) {
 
 	int deviceAddress4ByteMask = 1;
 
-	sensor->present=0;
+	sensor->temp_present=0;
 	if (sensor->owLastDevice) {
 		// server.log("OneWire Search Complete");
 		sensor->owLastDevice = 0;
@@ -354,7 +354,7 @@ int OWSearch(t_ds2482 *sensor) {
 			// server.log(format("OneWire Device Address = %.8X%.8X", owDeviceAddress[1], owDeviceAddress[0]));
 			if (OWCheckCRC(sensor)) { 
 				if ((sensor->owDeviceAddress[0] & 0xff) == 0x28) {
-					sensor->present=1; return 1; 
+					sensor->temp_present=1; return 1; 
 				} else {
 					// server.log("OneWire device address CRC check failed");
 					return 1;
@@ -451,7 +451,7 @@ int OWReadTemperature(t_ds2482 *sensor) {
 	int data[5];
 	int i,j;
 
-	sensor->valid=0;
+	sensor->temp_valid=0;
 	for(i=0,j=0; i<5; i++) { // we only need 5 of the bytes
 		// Technically we only need two, but grabbing 5 lets us double check the configuration
 		data[i] = OWReadByte(sensor);
@@ -478,7 +478,7 @@ int OWReadTemperature(t_ds2482 *sensor) {
 			sensor->temperature=(i>>3)/2.0;
 			if (sensor->databits!=9) j=2;
 	}
-	if ((sensor->temperature<125) && (sensor->temperature>-55)) sensor->valid=1; else j=0;
+	if ((sensor->temperature<125) && (sensor->temperature>-55)) sensor->temp_valid=1; else j=0;
 	// server.log(format("Temperature = %.1f °C", celsius));
 	debug_print("%s @ 0x18: temperature %f\n",__func__,sensor->temperature);
 	return j;

@@ -21,6 +21,15 @@ rio.org/
 
 // define struct for DS2482 sensor
 
+#define AUTO 0
+#define HTU21D 1
+#define HTU31D 2
+#define SI7021 3
+#define DS18B20 4
+#define AM2321 5
+#define SHT4X 6
+#define SHT85 7
+
 typedef struct {
 	int fd;
 	unsigned char address;
@@ -29,13 +38,20 @@ typedef struct {
 	int owLastDevice; // should init to 0
 	int owLastDiscrepancy; // should init to 0
 	float temperature;
-	int present;
-	int valid;
+	float humidity;
+	char temp_present;
+	char humidity_present;
+	char temp_valid;
+	char humidity_valid;
+	char sensor_type;
 	int conversion_time;
 	int delta_conversion_time;
 	int databits;
+	int humidity_databits;
+	int configbits;
 	int rollover;
 	int maxrollover;
+	int compensate;
 } t_ds2482;
 
 int ds2482_open(t_ds2482 *, unsigned char);
