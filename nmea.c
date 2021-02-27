@@ -184,6 +184,99 @@ int Compose_Voltage_POV(char *sentence, float voltage)
 }
 
 /**
+* @brief Implements the $POV NMEA Sentence for temperature data
+* @param sentence char pointer for created string
+* @param Temperature
+* @return result
+* 
+* Implementation of the properitary NMEA sentence for AKF Glidecomputer
+* \n
+*
+*     $POV,T,Temperature*CRC
+*       |  |      |       |
+*       1  2      3       4
+*
+*     1: $P            		Properitary NMEA Sentence
+*        OV         		Manufacturer Code: OpenVario
+*
+*     2: T               	Code for Temperature in C
+*     
+*     3: Temperature        Format: 27.125
+*
+* @date 13.03.2016 born
+*
+*/ 
+
+int Compose_Temperature_POV(char *sentence, float temperature)
+{
+	int length;
+	int success = 1;
+
+ 	// check voltage input value for validity
+ 	if ((temperature < -55) || (temperature > 125)) {
+ 		temperature = 23;
+ 		success = 10;
+	}
+
+	// compose NMEA String
+	length = sprintf(sentence, "$POV,T,%+05.4f", temperature); 
+
+	// Calculate NMEA checksum and add to string
+	sprintf(sentence + length, "*%02X\r\n", NMEA_checksum(sentence));
+
+	//print sentence for debug
+	debug_print("NMEA sentence: %s\n", sentence);
+	return (success);
+}
+
+/**
+* @brief Implements the $POV NMEA Sentence for humidity data
+* @param sentence char pointer for created string
+* @param Humidity
+* @return result
+*
+* Implementation of the properitary NMEA sentence for AKF Glidecomputer
+* \n
+*
+*     $POV,H,Humidity*CRC
+*       |  |      |       |
+*       1  2      3       4
+*
+*     1: $P                     Properitary NMEA Sentence
+*        OV                     Manufacturer Code: OpenVario
+*
+*     2: H                      Code for Humidity in C
+*
+*     3: Humidity        Format: 27.1
+*
+* @date 13.03.2016 born
+*
+*/
+
+int Compose_Humidity_POV(char *sentence, float humidity)
+{
+	int length;
+	int success = 1;
+
+	// check voltage input value for validity
+	if ((humidity < 0) || (humidity > 100)) {
+		humidity = 50;
+		success = 10;
+	}
+
+	// compose NMEA String
+	length = sprintf(sentence, "$POV,H,%05.4f", humidity);
+
+	// Calculate NMEA checksum and add to string
+	sprintf(sentence + length, "*%02X\r\n", NMEA_checksum(sentence));
+
+	//print sentence for debug
+	debug_print("NMEA sentence: %s\n", sentence);
+	return (success);
+}
+
+
+/**
 * @brief Implements the NMEA Checksum
 * @param char* NMEA string
 * @return int Calculated Checksum for string

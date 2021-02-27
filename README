@@ -36,3 +36,73 @@ When run as a regular service this can make the timing jitter worse, and results
 pops on the audio.  It is not presently understood why this makes a difference.
 
 -------------------------------------------------------------------------------------------------------------------------------------
+
+Feb 19 2021
+
+Temperature/Humidity sensor support has been added.  The following sensors are currently supported:
+
+	Maxim: DS18B20 (temperature only) - One Wire
+	Aosong: AM2321 - I2C
+	TE: HTU2xD family, HTU31D (HTU21DF and HTU31D are the best) - I2C
+	Silicon Labs: SI7006, SI7013, SI7020, SI7021 (SI7021 is the best) - I2C
+	Sensirion: SHT40, SHT41, SHT45, SHT85 (SHT71 and SHT75 may work as well -- SHT45 and SHT85 are best) - I2C
+
+The Aosong sensor appears to have reliability problems and is likely more sensitive to aging than the rest and is not recommended.
+A factory filter or encapsulation option is likely to improve aging charcteristics on the humidity based sensors and is recommended if available.
+See Silicon Labs AN607 App Note for more information.
+
+The SI70xx, SHT4X, SHT85, and HTU31D sensors are not yet tested.  However, SI70xx's interface is very similar to HTU21D and is likely to
+work fine.  I encourage you to try one of the untested sensors, I will make a best effort to fix any bugs that may exist in the software
+and believe I should be able to fix any bugs that may be present quickly.  These sensors appears to be the nicest ones out there and it would 
+be a shame if they weren't used.
+
+Bosch's BME280/BME680 conflicts with the the MS5611 I2C addresses and cannot be supported.
+
+The following changes are needed in the sensord.conf file:
+
+output_POV_T (enable temperature output)
+output_POV_H (enable humidity output, obviously this doesn't apply to the DS18B20)
+
+temp_sensor_type (auto, ds18b20, am2321, htu21d, htu31d, sht4x, sht85, si7021) ('auto' attempts to perform an autodetect and is therefore the simplest solution)
+temp_databits # (this is the number of bits you want to use)
+temp_rate # of samples per second
+
+Note: If an invalid number of databits is entered for the device you have or if temp_databits is not included, the maximum number of bits is 
+used.  It is possible to select a temp_rate which is incompatible with your device.  If the temp_rate line is not included, a default value 
+of once per second is used.  It's worth noting that high sample rates can raise the temperature of the device which will result in inaccurate humidity
+(and to a lesser degree, temperature) readings.  It is unlikely you'd ever want to go above 4 for temp_rate.
+
+In other words, the recommended configuration is always:
+
+output_POV_T
+output_POV_H
+temp_sensor_type auto
+
+Even if you have no device attached this will work, it will simply take a fraction of a second longer on startup while trying to detect devices.
+HTU31D is supported on both addresses (0x40 and 0x41) and will autodetect.  Similarly, the SHT4x is supported on both addresses (0x44 and 0x45) and will autodetect.
+
+The software only supports ONE device at a time.  Please do not attempt with two devices connected even if the devices don't conflict.
+
+Note about humidity extremes:
+
+All of these sensors are susceptible to aging or long term shifts as a result of prolonged exposure to humidity extremes (<20% or >80% RH).  The latter being
+a more significant issue.  The factory filters tend to protect the sensors against high humidity better (according to Silicon Labs).  All of the sensors (except 
+the AM2321) contain a built in heater.  This heater is designed to be turned on, raising the temperature of the device and lowering the relative humidity.  In 
+general these heaters are good for about a 1-3 degree C rise (in still air) and can drop the RH by 5-15%.  By sampling data you can get some diagnostics with 
+the heater off and on you can determine the time constants of the sensor, as well as get some idea as to how accurate the sensor is since the RH vs T behavior 
+is predictable.  None of these self diagnostics are currently being used, although a standalone utility may be developed.  A Silicon Labs Apps Engineer stated 
+that he did not believe these self diagnostics were particularly useful.
+
+The SI70xx is unique among the other sensors in that it has a very powerful, programmable heating element that can burn as much as 300mW.  This can easily drive
+the relative humidity down below 10%.  The manufacturer recommends using this to limit the RH at or below 80%.  Unfortunately, exposure is problematic when powered
+or unpowered and as the device is expected to spend most of it's life unpowered, the ability of the sensor to keep itself below 80% RH when operating appears to be
+of little utility.  However, if a use case exists to justify this it would not be difficult to add this feature.
+
+If the sensor's RH measurements do start to drift from prolonged exposure to high humidity, most manufacturers recommend the following procedure:
+1) Bake @ 125C for 12 hours
+2) Rehydrate @ 30C and 75% RH for 10 hours
+
+Silicon Labs claims that baking at 100C for 24 hours may be adequate to significantly improve or completely reverse drift from prolonged exposure to high humidity.
+They also claim that the Si7021 heater is capable of raising the temperature of the device above 100C and may be able to perform this function.  This function could
+be incorporated into the aforementioned diagnostic utility if there is interest.
+
