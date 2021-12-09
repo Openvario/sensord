@@ -410,7 +410,8 @@ int am2321_read (t_ds2482 *sensor) {
 	uint8_t data[8];
 
 	data[0] = 0x00;
-	write(sensor->fd, NULL, 0);
+	if (write(sensor->fd, NULL, 0)<0)
+        return 3;
 
 	struct timespec nstime = {0,1.0e6};
 	while (nanosleep (&nstime,&nstime)) ; /* Wait atleast 1.5ms */

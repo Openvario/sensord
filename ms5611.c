@@ -36,6 +36,8 @@
 extern int g_debug;
 extern FILE *fp_console;
 
+struct timespec sensor_prev;
+
 float sensor_wait (float time)
 {
         struct timespec curtime;
