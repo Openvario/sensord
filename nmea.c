@@ -166,9 +166,14 @@ int Compose_Voltage_POV(char *sentence, float voltage)
 	int success = 1;
 
 	// check voltage input value for validity
-	if ((voltage < 2.) || (voltage > 20.))
+	if (voltage < 2.)
 	{
 		voltage = 0.;
+		success = 10;
+	}
+    else if (voltage > 20.)
+	{
+		voltage = 99.9;
 		success = 10;
 	}
 	
