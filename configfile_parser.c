@@ -91,7 +91,7 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					if (strcmp(tmp,"static_sensor") == 0)
 					{
 						// get config data for static sensor
-						sscanf(line, "%19s %f %f", tmp, &static_sensor->offset, &static_sensor->linearity);
+						sscanf(line, "%19s %f %f %hhx %hhu", tmp, &static_sensor->offset, &static_sensor->linearity, &static_sensor->address, &static_sensor->bus);
 						static_sensor->offset*=16;
 					}
 
@@ -132,7 +132,7 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					if (strcmp(tmp,"tek_sensor") == 0)
 					{
 						// get config data for tek sensor
-						sscanf(line, "%19s %f %f", tmp, &tek_sensor->offset, &tek_sensor->linearity);
+						sscanf(line, "%19s %f %f %hhx %hhu", tmp, &tek_sensor->offset, &tek_sensor->linearity, &tek_sensor->address, &tek_sensor->bus);
 						tek_sensor->offset*=16;
 					}
 

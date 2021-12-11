@@ -522,6 +522,8 @@ int main (int argc, char **argv) {
 	static_sensor.comp2 = -0.0000004875;
 	static_sensor.comp1 = -0.2670286916;
 	static_sensor.comp0 = -18.7077108239;
+	static_sensor.address = 0x76;
+	static_sensor.bus = 1;
 
 	dynamic_sensor.offset = 0.0;
 	dynamic_sensor.linearity = 1.0;
@@ -534,6 +536,8 @@ int main (int argc, char **argv) {
 	tep_sensor.Pcomp2 = static_sensor.Pcomp2 = -0.0000004638;
 	tep_sensor.Pcomp1 = static_sensor.Pcomp1 =  0.9514328801;
 	tep_sensor.Pcomp0 = static_sensor.Pcomp0 =  0.1658634996;
+	tep_sensor.address = 0x77;
+	tep_sensor.bus = 1;
 
 	config.timing_log        = 0.066666666666666666666;
 	config.timing_mult       = 50;
@@ -642,8 +646,7 @@ int main (int argc, char **argv) {
 	{
 		// we need hardware sensors for running !!
 		// open sensor for static pressure
-		/// @todo remove hardcoded i2c address static pressure
-		if (ms5611_open(&static_sensor, 0x76) != 0)
+		if (ms5611_open(&static_sensor) != 0)
 		{
 			fprintf(stderr, "Open static sensor failed !!\n");
 			return 1;
@@ -657,8 +660,7 @@ int main (int argc, char **argv) {
 		static_sensor.valid = 1;
 
 		// open sensor for velocity pressure
-		/// @todo remove hardcoded i2c address for velocity pressure
-		if (ms5611_open(&tep_sensor, 0x77) != 0)
+		if (ms5611_open(&tep_sensor) != 0)
 		{
 			fprintf(stderr, "Open tep sensor failed !!\n");
 			return 1;
@@ -967,13 +969,13 @@ void print_runtime_config(void)
 	fprintf(stderr, "Sensor TEK:\n");
 	fprintf(stderr, "  Offset: \t%f\n",tep_sensor.offset);
 	fprintf(stderr, "  Linearity: \t%f\n", tep_sensor.linearity);
-	fprintf(stderr, "Sensor STATIC:\n");
-	fprintf(stderr, "  Offset: \t%f\n",static_sensor.offset);
+	fprintf(stderr, "  Address: \t0x%x\n", tep_sensor.address);
+	fprintf(stderr, "  Bus: \t\t%u\n", tep_sensor.bus);
 	fprintf(stderr, "  Linearity: \t%f\n", static_sensor.linearity);
 	fprintf(stderr, "Sensor TOTAL:\n");
 	fprintf(stderr, "  Offset: \t%f\n",dynamic_sensor.offset);
-	fprintf(stderr, "  Linearity: \t%f\n", dynamic_sensor.linearity);
-	fprintf(stderr, "=========================================================================\n");
+	fprintf(stderr, "  Address: \t0x%x\n", static_sensor.address);
+	fprintf(stderr, "  Bus: \t\t%u\n", static_sensor.bus);
 
 }
 

@@ -27,6 +27,7 @@
 typedef struct {
 	int fd;
 	unsigned char address;
+	uint8_t bus;
 	uint32_t C1s;
 	uint32_t C2s;
 	uint16_t C3;
@@ -62,7 +63,7 @@ int ms5611_init(t_ms5611 *);
 int ms5611_reset(t_ms5611 *);
 int ms5611_measure(t_ms5611 *);
 int ms5611_calculate(t_ms5611 *);
-int ms5611_open(t_ms5611 *, unsigned char);
+int ms5611_open(t_ms5611 *);
 
 int ms5611_calculate_pressure(t_ms5611 *);
 int ms5611_read_pressure(t_ms5611 *);
