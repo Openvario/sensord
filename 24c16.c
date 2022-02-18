@@ -19,7 +19,7 @@ int update_checksum(t_eeprom_data* data)
 
 	p_data = (char*)data;
 
-	for (i=0; i<sizeof(data); i++)
+	for (i=0; i<sizeof(*data); i++)
 	{
 		checksum += *p_data;
 		p_data++;
@@ -57,7 +57,7 @@ char verify_checksum(t_eeprom_data* data)
 
 	p_data = (char*)data;
 
-	for (i=0; i<sizeof(data); i++)
+	for (i=0; i<sizeof(*data); i++)
 	{
 		checksum += *p_data;
 		p_data++;
