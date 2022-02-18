@@ -18,7 +18,7 @@
 */
 
 #include "ms5611.h"
-#include <time.h>
+
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/ioctl.h>

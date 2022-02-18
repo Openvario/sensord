@@ -10,6 +10,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <time.h>
 
 int update_checksum(t_eeprom_data* data)
 {
