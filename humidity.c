@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <sys/ioctl.h>
-#include <fcntl.h> 
+#include <fcntl.h>
 #include <linux/i2c-dev.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -21,13 +21,13 @@ int si7021_crc_check(unsigned int value, uint8_t crc)
 	uint32_t msb     = 0x800000;
 	uint32_t mask    = 0xFF8000;
 	uint32_t result  = (uint32_t)value<<8; // Pad with zeros as specified in spec
-	
+
 	while( msb != 0x80 ) {
-		
+
 		// Check if msb of current value is 1 and apply XOR mask
 		if( result & msb )
 			result = ((result ^ polynom) & mask) | ( result & ~mask);
-			
+
 		// Shift by one
 		msb >>= 1;
 		mask >>= 1;
@@ -75,10 +75,10 @@ int sht4x_open (t_ds2482 *sensor, unsigned char i2c_address) {
 			if (si7021_crc_check((data[3]<<8)|(data[4]),data[5])!=0) return 5;
 			printf ("SHT85, Serial Number: 0x%x%x%x%x - ",data[0],data[1],data[3],data[4]);
         	} else return 3;
-	}	
+	}
 
-	if (g_debug > 0) { 
-		if (sensor->sensor_type==SHT4X) 
+	if (g_debug > 0) {
+		if (sensor->sensor_type==SHT4X)
 			printf ("Opened SHT4x\n");
 		else
 			printf ("Opened SHT85\n");
@@ -105,13 +105,13 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 
 	char data[8]={0xfe,0xe6,131,0,0xe7,0x1e,0x08,0x0a};
 	char data2[4]={0xfa,0x0f,0xfc,0xc9};
-	
+
 	if (write(sensor->fd,data+5,1)!=1) {                                    // Do HTU31D soft reset
 		struct timespec nstime = {0,15e6};
 		while (nanosleep (&nstime,&nstime)) ;                                           // Wait 15 microseconds after reset
 		if (write(sensor->fd,data+6,1)!=1) {					// Request Status byte
 			if (read(sensor->fd,data+6,1)==1) {
-				printf ("In4\n");				
+				printf ("In4\n");
 				if (data[6]!=0) return 3;						// Confirm status is good
 				if (write(sensor->fd,data+7,1)!=1) return 3;				// Request Serial Number
 				if (read(sensor->fd,data2,4)!=4) return 3;				// Read Serial Number
@@ -120,7 +120,7 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 					case 11 : sensor->databits=0x40; break;
 					case 12 : sensor->databits=0x4a; break;
 					case 13 : sensor->databits=0x54; break;
-					case 14 : 
+					case 14 :
 					default : sensor->databits=0x5e; break;
 				}
 				printf ("HTU31D, Serial Number 0x%x%x%x - ",data[0],data[1],data[2]);
@@ -135,10 +135,10 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 	struct timespec nstime = {0,15e6};
 	while (nanosleep (&nstime,&nstime)) ;						// Wait 15 microseconds after reset
 	if (write(sensor->fd,data+1,2)<0) return 2;					// Program for 11 bits
-	if (write(sensor->fd,data+4,1)<0) return 2;					// Initiate readback configuration 
+	if (write(sensor->fd,data+4,1)<0) return 2;					// Initiate readback configuration
 	if (read (sensor->fd,data+3,1)<0) return 3;					// Readback configuration
 	if ((data[2]&129)!=(data[3]&129)) return 3;					// Is it valid?
-        
+
 	switch (sensor->databits) {							// Set proper bit configuration
 		case 11 : data[2] = 131; break;
 		case 12 : data[2] = 3;   break;
@@ -147,26 +147,26 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 		default : data[2] = 2;   break;
         }
         if (write(sensor->fd,data+1,2)<0) return 4;					// Program proper bit configuration
-	if (write(sensor->fd,data+4,1)<0) return 4;					// Initiate readback configuration 
+	if (write(sensor->fd,data+4,1)<0) return 4;					// Initiate readback configuration
 	if (read(sensor->fd,data+3,1)<0) return 4;					// Read back configuration
 	if ((data[2]&129)!=(data[3]&129)) return 4; 					// Is it valid?
 	if (write(sensor->fd,data2,2)<0) return 4;					// Initiate Serial Number A readback
 	if (read (sensor->fd,data,8)<0) return 4;					// Readback Serial Number A
-	for (i=sernuma=0 ; i<8 ; i+=2) {				
+	for (i=sernuma=0 ; i<8 ; i+=2) {
 		if (si7021_crc_check(data[i],data[i+1])==1) return 4;			// Check for valid CRC
 		sernuma=(sernuma<<8)|(data[i]);
 	}
-	
+
 	if (write(sensor->fd,data2+2,2)<0) return 4;					// Initiate Serial Number B readback
 	if (read (sensor->fd,data,6)<0) return 4;					// Readback Serial Number B
 	for (i=sernumb=0 ; i<6 ; i+=3) {
 		if (si7021_crc_check((data[i]<<8)|(data[i+1]),data[i+2])==1) return 4;	// Check for valid CRC
 		sernumb=(sernumb<<16)|(data[i]<<8)|(data[i+1]);				// Concatenate Serial Number B
 	}
-	
+
 	switch (data[0]) {								// Display Serial number and set sensor type
 		case 0x00 :
-		case 0xff : sensor->sensor_type=SI7021; 
+		case 0xff : sensor->sensor_type=SI7021;
 			    printf ("SI7021, Engineering Sample, Serial Number: 0x%x%x\n",sernuma,sernumb); break;
 		case 0x0d :
 		case 0x14 :
@@ -175,13 +175,13 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 		case 0x32 : sensor->sensor_type=HTU21D;
 			    if ((sernumb&0xffff)!=0x4854)
 				printf ("HTU21D, but serial number is invalid - ");
-			    else 
+			    else
 				printf ("HTU21D, Serial Number: 0x%x%x%x%x%x - ",data[3],data[4],sernuma,data[0],data[1]);
 			    break;
 		default   : sensor->sensor_type=SI7021;
-			    printf ("SI70%d, UNKNOWN SENSOR, Serial Number 0x%x%x\n",data[0],sernuma,sernumb); 
+			    printf ("SI70%d, UNKNOWN SENSOR, Serial Number 0x%x%x\n",data[0],sernuma,sernumb);
 	}
-	if (sensor->sensor_type==SI7021) {						// If it's a SI7021 get the firmware revision		    
+	if (sensor->sensor_type==SI7021) {						// If it's a SI7021 get the firmware revision
 		data[0]=0x84;
 		data[1]=0xb8;
 		if (write(sensor->fd,data,2)<0) return 4;
@@ -193,7 +193,7 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
         	}
 	}
 
-	if (g_debug > 0) { 
+	if (g_debug > 0) {
 		if (sensor->sensor_type==SI7021) printf("Opened SI7021/HTU21D on 0x%x\n", i2c_address);		// Debug info
 		else printf ("Opened HTU21D on 0x%x\n",i2c_address);
 	}
@@ -203,9 +203,9 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 
 int si7021_start_humidity (t_ds2482 *sensor) {
 	char config[2],lngth=1;
-	
+
 	switch (sensor->sensor_type) {
-		case SI7021 : 
+		case SI7021 :
 		case HTU21D : config[0]=0xf5; break;
 		case HTU31D : config[0]=sensor->databits; break;
 		case SHT4X  : config[0]=0xfd; break;
@@ -220,9 +220,9 @@ int si7021_start_temp (t_ds2482 *sensor) {
 
 	// This sends a temperature conversion for an HTU21D, a humidity conversion for SI7021 (does both), and a conversion for HTU31D
 	char config[2],lngth=1;
-	
+
 	switch (sensor->sensor_type) {
-		case SI7021 : config[0]=0xf5; break; 
+		case SI7021 : config[0]=0xf5; break;
 		case HTU21D : config[0]=0xf3; break;
 		case HTU31D : config[0]=sensor->databits; break;
 		case SHT4X  : config[0]=0xfd; break;
@@ -239,7 +239,7 @@ int si7021_read_temp (t_ds2482 *sensor) {
 	double temp;
 
 	switch (sensor->sensor_type) {
-		case HTU21D : 
+		case HTU21D :
 			sensor->temp_valid=0;
 			if (read(sensor->fd, data, 3) != 3) return 4;
 			if (si7021_crc_check((data[0]<<8)|data[1],data[2])>0) return 2;
@@ -266,7 +266,7 @@ int si7021_read_humidity (t_ds2482 *sensor) {
 				if (sensor->compensate) temp += (25-sensor->temperature) * -0.15;
 				sensor->humidity = temp;
                         	sensor->humidity_valid = sensor->humidity_present;
-			} 
+			}
 			if (sensor->sensor_type==HTU21D) return x;
                         data[0]=0xe0;
                         if (write(sensor->fd,data, 1) != 1) return 4;
@@ -277,7 +277,7 @@ int si7021_read_humidity (t_ds2482 *sensor) {
 			}
 			return ((y<<1)|x);
 			break;
-		case HTU31D : 
+		case HTU31D :
                         data[0]=0x0;
                         if (write(sensor->fd,data, 1) != 1) return 4;
 		case SHT4X : case SHT85 :
@@ -312,7 +312,7 @@ int si7021_configure_heater_value (t_ds2482 *sensor, int value)
 
 	if (sensor->sensor_type==SI7021) {
 		data[1]=value&0xf;				// If SI7021 initialize the heat control register
-		if (write(sensor->fd,data,2)!=2) return 2;	// Program it 
+		if (write(sensor->fd,data,2)!=2) return 2;	// Program it
 		if (write(sensor->fd,data+2,1)!=1) return 2;    // Start readback
 		if (read(sensor->fd,data,1)!=1) return 2;	// Readback
 		if (data[1]!=(value&0xf)) return 2;		// Verify readback matches written value
@@ -320,7 +320,7 @@ int si7021_configure_heater_value (t_ds2482 *sensor, int value)
 	return 0;
 }
 
-// return code of 3 or 4 means you didn't successfully perorm the operation.  
+// return code of 3 or 4 means you didn't successfully perorm the operation.
 
 int si7021_configure_heater_onoff (t_ds2482 *sensor, int value)
 {

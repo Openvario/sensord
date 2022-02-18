@@ -1,20 +1,20 @@
-/*  
+/*
     sensord - Sensor Interface for XCSoar Glide Computer - http://www.openvario.org/
     Copyright (C) 2014  The openvario project
-    A detailed list of copyright holders can be found in the file "AUTHORS" 
+    A detailed list of copyright holders can be found in the file "AUTHORS"
 
-    This program is free software; you can redistribute it and/or 
-    modify it under the terms of the GNU General Public License 
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
     as published by the Free Software Foundation; either version 3
     of the License, or (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program; if not, see <http://www.gnu.org/licenses/>.	
+    along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "ds2482.h"
@@ -155,7 +155,7 @@ int OWWriteByte(t_ds2482 *sensor, unsigned char writeval) {
 		return -1;
 	}
 	data[0]=0xa5;
-	data[1]=writeval;    
+	data[1]=writeval;
 	if (write(sensor->fd,data,2)!=2) { // set write byte command (A5) and send data (byte)
 		// Device failed to acknowledge
 		// server.log(format("I2C Write Byte Failed. Data: %#.2X", byte));
@@ -169,7 +169,7 @@ int OWWriteByte(t_ds2482 *sensor, unsigned char writeval) {
 			// server.log(format("Read Status Byte = %d", data[0]));
 			if (data[0] & 1) { // 1-Wire Busy bit
 				// server.log("One-Wire bus is busy");
-				struct timespec nstime = {0,1e6};  
+				struct timespec nstime = {0,1e6};
 				while (nanosleep(&nstime,&nstime)) ; // Wait, try again
 
 			} else {
@@ -283,7 +283,7 @@ int OWTriplet(t_ds2482 *sensor) {
 				while (nanosleep(&nstime,&nstime)) ; // Wait, try again
 			} else {
 				// server.log("One-Wire bus is idle");
-				sensor->owTriplet=(data[0]>>5)&7;            
+				sensor->owTriplet=(data[0]>>5)&7;
 				return 1;
 			}
 		}
@@ -319,10 +319,10 @@ int OWSearch(t_ds2482 *sensor) {
 		int lastZero = 0;
 		int deviceAddress4ByteIndex = 0; // Fill last 4 bytes first, data from onewire comes LSB first.
 
-		OWWriteByte(sensor, 0xF0); //Issue the Search ROM command        
+		OWWriteByte(sensor, 0xF0); //Issue the Search ROM command
 		do { // loop to do the search
 			if (bitNumber < sensor->owLastDiscrepancy) {
-				if (sensor->owDeviceAddress[deviceAddress4ByteIndex] & deviceAddress4ByteMask) 
+				if (sensor->owDeviceAddress[deviceAddress4ByteIndex] & deviceAddress4ByteMask)
 					sensor->owTriplet |= 4;  else sensor->owTriplet &= 3;
 			} else if (bitNumber == sensor->owLastDiscrepancy) // if equal to last pick 1, if not pick 0
 				sensor->owTriplet |= 4; else sensor->owTriplet &= 3;
@@ -335,9 +335,9 @@ int OWSearch(t_ds2482 *sensor) {
 			if ((sensor->owTriplet&3)==3) break;
 
 			// set or clear the bit in the SerialNum byte serial_byte_number with mask
-			if (sensor->owTriplet&4) 
+			if (sensor->owTriplet&4)
 				sensor->owDeviceAddress[deviceAddress4ByteIndex] |= deviceAddress4ByteMask;
-			else 
+			else
 				sensor->owDeviceAddress[deviceAddress4ByteIndex] &= ~deviceAddress4ByteMask;
 			bitNumber++; // increment the byte counter bit number
 			deviceAddress4ByteMask <<=  1; // shift the bit mask left
@@ -352,9 +352,9 @@ int OWSearch(t_ds2482 *sensor) {
 			sensor->owLastDiscrepancy = lastZero;
 			if (sensor->owLastDiscrepancy==0) sensor->owLastDevice = 1; else sensor->owLastDevice = 0;
 			// server.log(format("OneWire Device Address = %.8X%.8X", owDeviceAddress[1], owDeviceAddress[0]));
-			if (OWCheckCRC(sensor)) { 
+			if (OWCheckCRC(sensor)) {
 				if ((sensor->owDeviceAddress[0] & 0xff) == 0x28) {
-					sensor->temp_present=1; return 1; 
+					sensor->temp_present=1; return 1;
 				} else {
 					// server.log("OneWire device address CRC check failed");
 					return 1;
@@ -434,12 +434,12 @@ int OWConfigureBits (t_ds2482 *sensor) {
 		case 9  : data[3]=0x1f; sensor->conversion_time = 6; sensor->delta_conversion_time = 5; break;
 		case 10 : data[3]=0x3f; sensor->conversion_time = 13; sensor->delta_conversion_time = 5;  break;
 		case 11 : data[3]=0x5f; sensor->conversion_time = 28; sensor->delta_conversion_time = 5; break;
-		default : sensor->conversion_time = 58; sensor->delta_conversion_time = 5; break; 
+		default : sensor->conversion_time = 58; sensor->delta_conversion_time = 5; break;
 	}
-	for (i=0,j=1;i<4;++i) 
-		if (OWWriteByte(sensor,data[i])==-1) j=0;	 
+	for (i=0,j=1;i<4;++i)
+		if (OWWriteByte(sensor,data[i])==-1) j=0;
 	return j;
-}		
+}
 
 
 // Return values are:
@@ -474,7 +474,7 @@ int OWReadTemperature(t_ds2482 *sensor) {
 			sensor->temperature=(i>>2)/4.0;
 			if (sensor->databits!=10) j=2;
 			break;
-		default : // server.log("9 bit resolution"); // 93.75 ms	        
+		default : // server.log("9 bit resolution"); // 93.75 ms
 			sensor->temperature=(i>>3)/2.0;
 			if (sensor->databits!=9) j=2;
 	}
