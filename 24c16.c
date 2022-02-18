@@ -1,7 +1,7 @@
 
 
 #include "24c16.h"
-#include "ms5611.h"
+
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
@@ -142,8 +142,7 @@ char eeprom_write(t_24c16 *eeprom, char *s, unsigned char offset, unsigned char 
 		}
 
 		// give EEPROM time for write ...
-		clock_gettime(CLOCK_REALTIME,&sensor_prev);
-		sensor_wait(10000);
+		usleep(10000);
 		buf[0]++;
 		s++;
 	}
