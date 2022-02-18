@@ -648,6 +648,8 @@ int main (int argc, char **argv) {
 		}
 	}
 
+	close(eeprom.fd);
+
 	// print runtime config
 	print_runtime_config();
 
@@ -733,6 +735,7 @@ int main (int argc, char **argv) {
 					if (am2321_open(&temp_sensor,0x5c)) {
 						if (!autodetect) fprintf (stderr,"Open AM2321 temperature/humidity Sensor failed !!\n"); else
 						printf ("AM2321 temperature/humidity sensor not detected\n");
+						close(temp_sensor.fd);
 					} else {
 						printf ("AM2321 temperature/humidity sensor present\n");
 						temp_sensor.humidity_present=config.output_POV_H;
@@ -754,6 +757,7 @@ int main (int argc, char **argv) {
 							 break;
 						case 3 : printf ("SHT4X sensor may be detected on 0x45, but not working\n");
 							 fprintf (stderr,"SHT4X sensor may be detected on 0x45, but not working\n");
+							 close(temp_sensor.fd);
 							 break;
 						case 4 : if ((temp_sensor.sensor_type)==SHT4X) {
 								 printf ("SHT4X sensor detected on 0x45, but failed to read serial number\n");
@@ -764,7 +768,9 @@ int main (int argc, char **argv) {
 							 if (temp_sensor.rollover==0) temp_sensor.rollover=80;
 							 autodetect=0;
 							 break;
-						default : break;
+						default :
+							close(temp_sensor.fd);
+							break;
 					}
 					if (x)
 						switch (sht4x_open(&temp_sensor,0x44)) {
@@ -777,6 +783,7 @@ int main (int argc, char **argv) {
 							break;
 							case 3 : printf ("SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
 								 fprintf (stderr,"SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
+								 close(temp_sensor.fd);
 								 break;
 							case 4 : if ((temp_sensor.sensor_type)==SHT4X) {
 									printf ("SHT4X sensor detected on 0x44, but failed to read serial number\n");
@@ -792,6 +799,7 @@ int main (int argc, char **argv) {
 								 break;
 							default : if (!autodetect) fprintf (stderr,"Open SHT4X/SHT85 temperature/humidity sensor failed !!\n"); else
 									  printf ("SHT4X/SHT85 tenperature/humidity sensor not detected\n");
+								close(temp_sensor.fd);
 						}
 					if (!autodetect) break;
 					// fallthrough
@@ -807,6 +815,7 @@ int main (int argc, char **argv) {
 								break;
 							case 3 : fprintf (stderr,"HTU31D may be detected on 0x41, but not working\n");
 								printf ("HTU31D sensor may be detected on 0x41, but not working\n");
+								close(temp_sensor.fd);
 								break;
 							case 4 : printf ("HTU31D sensor detected on 0x41, but failed to read serial number\n");
 								 fprintf (stderr,"HTU31D sensor detected on 0x41, but failed to read serial number\n");
@@ -815,7 +824,9 @@ int main (int argc, char **argv) {
 								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
 								autodetect=0;
 								break;
-							default : break;
+							default :
+								close(temp_sensor.fd);
+								break;
 						}
 					}
 					if (x)
@@ -830,6 +841,7 @@ int main (int argc, char **argv) {
 								 break;
 							case 3 : printf ("HTU31D sensor may be detected on 0x40, but not working\n");
 								 fprintf (stderr,"HTU31D sensor may be detected on 0x40, but not working\n");
+								 close(temp_sensor.fd);
 								 break;
 							case 4 : printf ("HTU31D sensor detected on 0x40, but failed to read serial number\n");
 								 fprintf (stderr,"HTU31D sensor detected on 0x40, but failed to read serial number\n");
@@ -855,6 +867,7 @@ int main (int argc, char **argv) {
 							case 2 : case 5 : default :
 								if (!autodetect) fprintf (stderr,"Open SI7021/HTU21D/HTU31D temperature/humidity sensor failed !!\n"); else
 								printf ("SI7021/HTU21D/HTU31D tenperature/humidity sensor not detected\n");
+								close(temp_sensor.fd);
 						}
 					if (!autodetect) break;
 					// fallthrough
