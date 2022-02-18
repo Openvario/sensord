@@ -18,6 +18,9 @@
 */
 #pragma once
 
-extern struct timespec sensor_prev;
+/**
+ * Mark the current time stamp as the beginning of the waiting period.
+ */
+void sensor_wait_mark(void);
 
 float sensor_wait (float time);

@@ -23,7 +23,12 @@
 #include <time.h>
 #include <stdint.h>
 
-struct timespec sensor_prev;
+static struct timespec sensor_prev;
+
+void sensor_wait_mark(void)
+{
+	clock_gettime(CLOCK_REALTIME, &sensor_prev);
+}
 
 float sensor_wait (float time)
 {

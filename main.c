@@ -293,7 +293,7 @@ void pressure_measurement_handler(void)
 			ms5611_read_temp(&tep_sensor,glitch);
 			ms5611_read_pressure(&static_sensor);
 			ms5611_start_pressure(&tep_sensor);
-			clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			sensor_wait_mark();
 			ms5611_start_temp(&static_sensor);
 			if (abs((int)static_sensor.D1l-(int) static_sensor.D1)>100e3)  reject=1;
 			if (!glitch)
@@ -341,7 +341,7 @@ void pressure_measurement_handler(void)
 			ms5611_read_pressure(&tep_sensor);
 			ms5611_read_temp(&static_sensor,glitch);
 			ms5611_start_temp(&tep_sensor);
-			clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			sensor_wait_mark();
 			ms5611_start_pressure(&static_sensor);
 			if (abs((int) tep_sensor.D1l-(int) tep_sensor.D1)>100e3) reject=1;
 			if (!glitch)
@@ -892,9 +892,9 @@ int main (int argc, char **argv) {
 		{
 			ms5611_start_temp(&static_sensor);
 			ms5611_start_temp(&tep_sensor);
-			if (i==0) clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			if (i==0) sensor_wait_mark();
 			sensor_wait(12500);
-			clock_gettime(CLOCK_REALTIME,&sensor_prev);
+			sensor_wait_mark();
 			ms5611_read_temp(&static_sensor,0);
 			ms5611_read_temp(&tep_sensor,0);
 		}
@@ -902,14 +902,14 @@ int main (int argc, char **argv) {
 		ms5611_start_pressure(&static_sensor);
 		ms5611_start_temp(&tep_sensor);
 		sensor_wait(12500);
-		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		sensor_wait_mark();
 
 		ms5611_read_pressure(&static_sensor);
 		ms5611_read_temp(&tep_sensor,0);
 		ms5611_start_pressure(&tep_sensor);
 		ms5611_start_temp(&static_sensor);
 		sensor_wait(12500);
-		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		sensor_wait_mark();
 
 		ms5611_read_pressure(&tep_sensor);
 		ms5611_read_temp(&static_sensor,0);
