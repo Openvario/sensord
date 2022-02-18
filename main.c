@@ -664,8 +664,7 @@ int main (int argc, char **argv) {
 
 		//initialize static pressure sensor
 		ms5611_reset(&static_sensor);
-		clock_gettime(CLOCK_REALTIME,&sensor_prev);
-		sensor_wait(10e3);
+		usleep(10000);
 		ms5611_init(&static_sensor);
 		static_sensor.secordcomp = g_secordcomp;
 		static_sensor.valid = 1;
@@ -680,8 +679,7 @@ int main (int argc, char **argv) {
 
 		//initialize tep pressure sensor
 		ms5611_reset(&tep_sensor);
-		clock_gettime(CLOCK_REALTIME,&sensor_prev);
-		sensor_wait(10e3);
+		usleep(10000);
 		ms5611_init(&tep_sensor);
 		tep_sensor.secordcomp = g_secordcomp;
 		tep_sensor.valid = 1;
