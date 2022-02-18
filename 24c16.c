@@ -14,12 +14,11 @@
 int update_checksum(t_eeprom_data* data)
 {
 	char* p_data;
-	int i;
 	char checksum=0x00;
 
 	p_data = (char*)data;
 
-	for (i=0; i<sizeof(*data); i++)
+	for (size_t i=0; i<sizeof(*data); i++)
 	{
 		checksum += *p_data;
 		p_data++;
@@ -52,12 +51,11 @@ int eeprom_read_data(t_24c16 *eeprom, t_eeprom_data *data)
 char verify_checksum(t_eeprom_data* data)
 {
 	char* p_data;
-	int i;
 	char checksum=0x00;
 
 	p_data = (char*)data;
 
-	for (i=0; i<sizeof(*data); i++)
+	for (size_t i=0; i<sizeof(*data); i++)
 	{
 		checksum += *p_data;
 		p_data++;

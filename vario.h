@@ -16,4 +16,4 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-const float ComputeVario(const float, const float);
+float ComputeVario(const float, const float);

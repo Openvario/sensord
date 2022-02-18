@@ -18,7 +18,7 @@
 
 #include <math.h>
 
-const float ComputeVario(const float p, const float d_p)
+float ComputeVario(const float p, const float d_p)
 {
   static const float FACTOR = -2260.389548275485;
   static const float EXP = -0.8097374740609689;

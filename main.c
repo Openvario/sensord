@@ -109,6 +109,7 @@ enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
 *
 */
 void sigintHandler(int sig_num){
+	(void)sig_num;
 
 	signal(SIGINT, sigintHandler);
 
@@ -706,6 +707,7 @@ int main (int argc, char **argv) {
 			switch (temp_sensor.sensor_type) {
 				case AUTO : printf ("Autodetecting temperature/humidity sensor\n");
 					    autodetect=1;
+					    // fallthrough
 				case DS18B20 :
 					if (!ds2482_open(&temp_sensor,0x18))
 						fprintf (stderr,"DS2482 interface failure !!\n");
@@ -728,6 +730,7 @@ int main (int argc, char **argv) {
 						}
 					}
 					if (!autodetect) break;
+					// fallthrough
 				case AM2321 :
 					if (am2321_open(&temp_sensor,0x5c)) {
 						if (!autodetect) fprintf (stderr,"Open AM2321 temperature/humidity Sensor failed !!\n"); else
@@ -741,6 +744,7 @@ int main (int argc, char **argv) {
 						autodetect=0;
 					}
 					if (!autodetect) break;
+					// fallthrough
 				case SHT4X : case SHT85 :
 					switch (sht4x_open(&temp_sensor,0x45)) {
 						case 0 : printf ("sensor present\n");
@@ -792,6 +796,7 @@ int main (int argc, char **argv) {
 									  printf ("SHT4X/SHT85 tenperature/humidity sensor not detected\n");
 						}
 					if (!autodetect) break;
+					// fallthrough
 				case SI7021 : case HTU21D : case HTU31D :
 					if ((temp_sensor.sensor_type!=HTU21D) && (temp_sensor.sensor_type!=SI7021)) {
 						switch (si7021_open(&temp_sensor,0x41)) {
@@ -854,6 +859,7 @@ int main (int argc, char **argv) {
 								printf ("SI7021/HTU21D/HTU31D tenperature/humidity sensor not detected\n");
 						}
 					if (!autodetect) break;
+					// fallthrough
 				default :
 					config.output_POV_T=config.output_POV_H=0;
 					break;

@@ -1,6 +1,6 @@
 # Makefile for sensord
 #Some compiler stuff and flags
-CFLAGS += -g -Wall
+CFLAGS += -g -Wall -Wextra
 EXECUTABLE = sensord sensorcal compdata
 _OBJ = ms5611.o ams5915.o ads1110.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o vario.o AirDensity.o 24c16.o ds2482.o humidity.o
 _OBJ_CAL = 24c16.o ams5915.o sensorcal.o ms5611.o

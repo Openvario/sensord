@@ -112,6 +112,7 @@ enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
 
 */
 void sigintHandler(int sig_num){
+	(void)sig_num;
 
 	signal(SIGINT, sigintHandler);
 
