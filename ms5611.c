@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
+#include <inttypes.h>
 #include "def.h"
 
 #define DELTA_TIME_US(T1, T2)   (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)
@@ -406,8 +407,8 @@ int ms5611_calculate_pressure(t_ms5611 *sensor)
 
 		// some debugging output
 		ddebug_print("%s @ 0x%x: D1: %u\n", __func__, sensor->address, sensor->D1);
-		ddebug_print("%s @ 0x%x: OFF: %lld\n", __func__, sensor->address, sensor->off);
-		ddebug_print("%s @ 0x%x: SENS: %lld\n", __func__, sensor->address, sensor->sens);
+		ddebug_print("%s @ 0x%x: OFF: %" PRId64 "\n", __func__, sensor->address, sensor->off);
+		ddebug_print("%s @ 0x%x: SENS: %" PRId64 "\n", __func__, sensor->address, sensor->sens);
 		debug_print("%s @ 0x%x: Pressure measured: %ld, %f\n", __func__, sensor->address, (unsigned long)sensor->p_meas, sensor->p);
 		return(0);
 	}
