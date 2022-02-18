@@ -16,28 +16,18 @@
     You should have received a copy of the GNU General Public License
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
-
-#include "wait.h"
-#include "clock.h"
+#pragma once
 
 #include <time.h>
 
-struct timespec sensor_prev;
-
-float sensor_wait (float time)
+static inline float timespec_delta_s(const struct timespec *a,
+				     const struct timespec *b)
 {
-	struct timespec curtime;
+	return ((a->tv_sec+1.0e-9*a->tv_nsec)-(b->tv_sec+1.0e-9*b->tv_nsec));
+}
 
-	clock_gettime(CLOCK_REALTIME,&curtime);
-	curtime.tv_nsec=((long int) time)*1000 - (curtime.tv_nsec+(curtime.tv_sec-sensor_prev.tv_sec)*1e9 - sensor_prev.tv_nsec);
-	if (curtime.tv_nsec>1e9) {
-		curtime.tv_sec=curtime.tv_nsec/1e9;
-		curtime.tv_nsec-=curtime.tv_sec*1e9;
-	} else {
-		curtime.tv_sec=0;
-		if (curtime.tv_nsec<0) curtime.tv_nsec=0;
-	}
-	while (nanosleep(&curtime,&curtime)) ;
-	clock_gettime(CLOCK_REALTIME,&curtime);
-	return timespec_delta_us(&curtime, &sensor_prev) - time;
+static inline float timespec_delta_us(const struct timespec *a,
+				      const struct timespec *b)
+{
+	return timespec_delta_s(a, b) * 1000000;
 }

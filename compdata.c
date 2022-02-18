@@ -55,7 +55,6 @@
 #define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
 
 #define MEASTIMER (SIGRTMAX)
-#define DELTA_TIME(T1,T2)       (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec)))
 
 // Sensor objects
 t_ms5611 static_sensor;

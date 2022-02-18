@@ -49,6 +49,7 @@
 #include "AirDensity.h"
 #include "24c16.h"
 #include "wait.h"
+#include "clock.h"
 
 #define I2C_ADDR 0x76
 #define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
@@ -56,7 +57,6 @@
 #define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
 
 #define MEASTIMER (SIGRTMAX)
-#define DELTA_TIME(T1,T2)       (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec)))
 
 timer_t  measTimer;
 int g_debug=0;
@@ -417,7 +417,7 @@ void pressure_measurement_handler(void)
 
 				tep_sensor.valid=1;
 				clock_gettime(CLOCK_REALTIME,&kalman_cur);
-				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, DELTA_TIME(kalman_cur,kalman_prev));
+				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, timespec_delta_s(&kalman_cur, &kalman_prev));
 				kalman_prev=kalman_cur;
 			}
 			if (io_mode.sensordata_to_file == TRUE) {
