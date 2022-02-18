@@ -265,7 +265,7 @@ void polyfit (double val[][3], int idx, double pf[], double rmserr[])
 		x[3]+=tmp*tmp;
 		y[1]+=val[i][0]*val[i][1];
 		y[2]+=val[i][0]*tmp;
-        }
+	}
 	det=x[3]*(x[1]*idx-x[0]*x[0])-x[2]*(x[2]*idx-x[0]*x[1])+x[1]*(x[2]*x[0]-x[1]*x[1]);
 	inv[0][0]=x[1]*idx-x[0]*x[0];
 	inv[0][1]=-(x[2]*idx-x[1]*x[0]);

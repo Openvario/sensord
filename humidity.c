@@ -74,7 +74,7 @@ int sht4x_open (t_ds2482 *sensor, unsigned char i2c_address) {
 			if (si7021_crc_check((data[0]<<8)|(data[1]),data[2])!=0) return 5;
 			if (si7021_crc_check((data[3]<<8)|(data[4]),data[5])!=0) return 5;
 			printf ("SHT85, Serial Number: 0x%x%x%x%x - ",data[0],data[1],data[3],data[4]);
-        	} else return 3;
+		} else return 3;
 	}
 
 	if (g_debug > 0) {
@@ -116,7 +116,7 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 				if (write(sensor->fd,data+7,1)!=1) return 3;				// Request Serial Number
 				if (read(sensor->fd,data2,4)!=4) return 3;				// Read Serial Number
 				if (si7021_crc_check((data2[0]<<16)|(data2[1]<<8)|(data2[2]),data2[2])>0) return 4; // Verify CRC on serial number
-        			switch (sensor->databits) {                                             // Set proper bit configuration
+				switch (sensor->databits) {                                             // Set proper bit configuration
 					case 11 : sensor->databits=0x40; break;
 					case 12 : sensor->databits=0x4a; break;
 					case 13 : sensor->databits=0x54; break;
@@ -145,8 +145,8 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 		case 13 : data[2] = 130; break;
 		case 14 :
 		default : data[2] = 2;   break;
-        }
-        if (write(sensor->fd,data+1,2)<0) return 4;					// Program proper bit configuration
+	}
+	if (write(sensor->fd,data+1,2)<0) return 4;					// Program proper bit configuration
 	if (write(sensor->fd,data+4,1)<0) return 4;					// Initiate readback configuration
 	if (read(sensor->fd,data+3,1)<0) return 4;					// Read back configuration
 	if ((data[2]&129)!=(data[3]&129)) return 4; 					// Is it valid?
@@ -189,8 +189,8 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 		switch (data[0]) {
 			case 0xff : printf ("Firmware revision 1.0 - "); break;
 			case 0x20 : printf ("Firmware revision 2.0 - "); break;
-                	default   : printf ("Firmware revision UNKNOWN 0x%x - ",data[0]);
-        	}
+			default   : printf ("Firmware revision UNKNOWN 0x%x - ",data[0]);
+		}
 	}
 
 	if (g_debug > 0) {
@@ -228,9 +228,9 @@ int si7021_start_temp (t_ds2482 *sensor) {
 		case SHT4X  : config[0]=0xfd; break;
 		case SHT85  : config[0]=0x24; config[1]=0x00; lngth=2; break;
 		default     : return 2;
-        }
-        if (write(sensor->fd, &config, lngth)!=lngth) return 1;
-        return 0;
+	}
+	if (write(sensor->fd, &config, lngth)!=lngth) return 1;
+	return 0;
 }
 
 int si7021_read_temp (t_ds2482 *sensor) {
@@ -253,24 +253,24 @@ int si7021_read_temp (t_ds2482 *sensor) {
 }
 
 int si7021_read_humidity (t_ds2482 *sensor) {
-        char data[6],x,y;
-        double temp;
+	char data[6],x,y;
+	double temp;
 
 	sensor->humidity_valid=0;
 	if (sensor->sensor_type!=HTU21D) sensor->temp_valid=0;
-        switch (sensor->sensor_type) {
+	switch (sensor->sensor_type) {
 		case SI7021 : case HTU21D :
-                        if (read(sensor->fd, data, 3) != 3) return 4;
-                        if ((x=si7021_crc_check((data[0]<<8)|data[1],data[2]))==0) {
+			if (read(sensor->fd, data, 3) != 3) return 4;
+			if ((x=si7021_crc_check((data[0]<<8)|data[1],data[2]))==0) {
 				temp = (double) ((data[0]<<8)|data[1]) * 125/65536.0 - 6;
 				if (sensor->compensate) temp += (25-sensor->temperature) * -0.15;
 				sensor->humidity = temp;
-                        	sensor->humidity_valid = sensor->humidity_present;
+				sensor->humidity_valid = sensor->humidity_present;
 			}
 			if (sensor->sensor_type==HTU21D) return x;
-                        data[0]=0xe0;
-                        if (write(sensor->fd,data, 1) != 1) return 4;
-                        if (read(sensor->fd, data, 3) != 3) return 4;
+			data[0]=0xe0;
+			if (write(sensor->fd,data, 1) != 1) return 4;
+			if (read(sensor->fd, data, 3) != 3) return 4;
 			if ((y=si7021_crc_check((data[0]<<8)|data[1],data[2]))==0) {
 				sensor->temperature = (double) ((data[0]<<8)|data[1]) * 175.72/65536.0 - 46.85;
 				sensor->temp_valid = sensor->temp_present;
@@ -278,11 +278,11 @@ int si7021_read_humidity (t_ds2482 *sensor) {
 			return ((y<<1)|x);
 			break;
 		case HTU31D :
-                        data[0]=0x0;
-                        if (write(sensor->fd,data, 1) != 1) return 4;
+			data[0]=0x0;
+			if (write(sensor->fd,data, 1) != 1) return 4;
 		case SHT4X : case SHT85 :
-                        if (read(sensor->fd, data, 6) != 6) return 4;
-                        x=si7021_crc_check((data[0]<<8)|data[1],data[2]);
+			if (read(sensor->fd, data, 6) != 6) return 4;
+			x=si7021_crc_check((data[0]<<8)|data[1],data[2]);
 			y=si7021_crc_check((data[3]<<8)|data[4],data[5]);
 			switch (sensor->sensor_type) {
 				case HTU31D :
@@ -302,8 +302,8 @@ int si7021_read_humidity (t_ds2482 *sensor) {
 			if (y==0) sensor->humidity_valid = sensor->humidity_present;
 			return ((x<<1)|y);
 			break;
-        }
-        return 0;
+	}
+	return 0;
 }
 
 int si7021_configure_heater_value (t_ds2482 *sensor, int value)
@@ -391,9 +391,9 @@ int am2321_open (t_ds2482 *sensor, unsigned char i2c_address) {
 	if (am2321_read(sensor)>0) return 1;
 	if (g_debug > 0) printf("Opened AM2321 on 0x%x\n", i2c_address);
 
-        // assign file handle to sensor object
-        sensor->address = i2c_address;
-        return (0);
+	// assign file handle to sensor object
+	sensor->address = i2c_address;
+	return (0);
 }
 
 int am2321_wakeup (t_ds2482 *sensor) {
@@ -411,7 +411,7 @@ int am2321_read (t_ds2482 *sensor) {
 
 	data[0] = 0x00;
 	if (write(sensor->fd, NULL, 0)<0)
-        return 3;
+	return 3;
 
 	struct timespec nstime = {0,1.0e6};
 	while (nanosleep (&nstime,&nstime)) ; /* Wait atleast 1.5ms */

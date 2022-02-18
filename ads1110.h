@@ -20,7 +20,7 @@
 // define struct for AMS5915 sensor
 typedef struct {
 	float scale;
-        float offset;
+	float offset;
 	int voltage_raw;
 	float voltage_converted;
 	int fd;

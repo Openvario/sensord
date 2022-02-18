@@ -74,7 +74,7 @@ int ads1110_init(t_ads1110 *sensor)
 {
 	// set calibration data
 
-        ddebug_print("%s @ 0x%x: voltage_scale = %f voltage_offset = %f\n", __func__, sensor->address, 1.0/sensor->scale,sensor->offset);
+	ddebug_print("%s @ 0x%x: voltage_scale = %f voltage_offset = %f\n", __func__, sensor->address, 1.0/sensor->scale,sensor->offset);
 	return(0);
 
 }

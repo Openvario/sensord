@@ -153,7 +153,7 @@ int NMEA_message_handler(int sock)
 	if (temp_sensor.temp_valid) {
 		// Compose POV NMEA sentences
 		result=Compose_Temperature_POV(&s[0], temp_sensor.temperature);
- 		// printf ("temp: %f\n",temp_sensor.temperature);
+		// printf ("temp: %f\n",temp_sensor.temperature);
 		// // NMEA sentence valid ?? Otherwise print some error !!
 		if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
 		// Send NMEA string via socket to XCSoar send complete sentence including terminating '\0'
@@ -350,12 +350,12 @@ void pressure_measurement_handler(void)
 				else
 					deltax=abs((int)static_sensor.D2f-(int) static_sensor.D2);
 				if (deltax>deltaxmax) deltaxmax=deltax;
- 				if ((--glitchstart)==0) {
+				if ((--glitchstart)==0) {
 					if (deltaxmax>15)
 						glitch += ((int) round(log((double)(deltaxmax)*config.timing_log)*config.timing_mult))+config.timing_off;
 					deltaxmax=0;
 				}
- 			}
+			}
 
 			// if there was a glitch, compensate for the glitch
 			if (glitch)
@@ -407,7 +407,7 @@ void pressure_measurement_handler(void)
 			// check tep_pressure input value for validity
 			if ((tep_sensor.p/100 < 100) || (tep_sensor.p/100 > 1200))
 			{
- 				// tep pressure out of range
+				// tep pressure out of range
 				tep_sensor.valid = 0;
 			} else {
 				// of tep pressure
@@ -494,14 +494,14 @@ void temperature_measurement_handler(void)
 				break;
 			case HTU31D : case SI7021 : case SHT4X : case SHT85 :
 				if (temp_counter==0) {
-                                        if (rollover) si7021_read_humidity(&temp_sensor);
-                                        si7021_start_humidity(&temp_sensor);
-                                }
-                                if (++temp_counter>=temp_sensor.rollover) {
-                                        temp_counter=0;
-                                        rollover=1;
-                                }
-                                break;
+					if (rollover) si7021_read_humidity(&temp_sensor);
+					si7021_start_humidity(&temp_sensor);
+				}
+				if (++temp_counter>=temp_sensor.rollover) {
+					temp_counter=0;
+					rollover=1;
+				}
+				break;
 
 		}
 	}
@@ -679,8 +679,8 @@ int main (int argc, char **argv) {
 
 		//initialize tep pressure sensor
 		ms5611_reset(&tep_sensor);
-                clock_gettime(CLOCK_REALTIME,&sensor_prev);
-                sensor_wait(10e3);
+		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		sensor_wait(10e3);
 		ms5611_init(&tep_sensor);
 		tep_sensor.secordcomp = g_secordcomp;
 		tep_sensor.valid = 1;
@@ -730,7 +730,7 @@ int main (int argc, char **argv) {
 					if (!autodetect) break;
 				case AM2321 :
 					if (am2321_open(&temp_sensor,0x5c)) {
-                                		if (!autodetect) fprintf (stderr,"Open AM2321 temperature/humidity Sensor failed !!\n"); else
+						if (!autodetect) fprintf (stderr,"Open AM2321 temperature/humidity Sensor failed !!\n"); else
 						printf ("AM2321 temperature/humidity sensor not detected\n");
 					} else {
 						printf ("AM2321 temperature/humidity sensor present\n");
@@ -766,18 +766,18 @@ int main (int argc, char **argv) {
 					}
 					if (x)
 						switch (sht4x_open(&temp_sensor,0x44)) {
-						  	case 0 : printf ("sensor present\n");
-								 temp_sensor.humidity_present=config.output_POV_H;
+							case 0 : printf ("sensor present\n");
+								temp_sensor.humidity_present=config.output_POV_H;
 								 temp_sensor.temp_present=config.output_POV_T;
 								 if (temp_sensor.rollover==0) temp_sensor.rollover=80;
 								 autodetect=0;
 								 x=0;
 							break;
 							case 3 : printf ("SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
-						 		 fprintf (stderr,"SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
-						 		 break;
+								 fprintf (stderr,"SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
+								 break;
 							case 4 : if ((temp_sensor.sensor_type)==SHT4X) {
-								 	printf ("SHT4X sensor detected on 0x44, but failed to read serial number\n");
+									printf ("SHT4X sensor detected on 0x44, but failed to read serial number\n");
 									fprintf (stderr,"SHT4X sensor detected on 0x44, but failed to read serial nunber\n");
 								 } else {
 									printf ("SHT85 sensor detected, but failed to read serial number\n");
@@ -847,7 +847,7 @@ int main (int argc, char **argv) {
 								temp_sensor.humidity_present=config.output_POV_H;
 								temp_sensor.temp_present=config.output_POV_T;
 								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
-                                                        	autodetect=0;
+								autodetect=0;
 								break;
 							case 2 : case 5 : default :
 								if (!autodetect) fprintf (stderr,"Open SI7021/HTU21D/HTU31D temperature/humidity sensor failed !!\n"); else
@@ -879,7 +879,7 @@ int main (int argc, char **argv) {
 			clock_gettime(CLOCK_REALTIME,&sensor_prev);
 			ms5611_read_temp(&static_sensor,0);
 			ms5611_read_temp(&tep_sensor,0);
-                }
+		}
 
 		ms5611_start_pressure(&static_sensor);
 		ms5611_start_temp(&tep_sensor);

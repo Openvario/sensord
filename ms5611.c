@@ -40,7 +40,7 @@ struct timespec sensor_prev;
 
 float sensor_wait (float time)
 {
-        struct timespec curtime;
+	struct timespec curtime;
 
 	clock_gettime(CLOCK_REALTIME,&curtime);
 	curtime.tv_nsec=((long int) time)*1000 - (curtime.tv_nsec+(curtime.tv_sec-sensor_prev.tv_sec)*1e9 - sensor_prev.tv_nsec);

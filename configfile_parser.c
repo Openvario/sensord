@@ -79,18 +79,18 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					}
 
 					// check for output of POV_T sentence
-                	                if (strcmp(tmp,"output_POV_T") == 0)
-                        	        {
-                                	        config->output_POV_T = 1;
-                                        	//printf("OUTput POV_T enabled !! \n");
-	                                }
+					if (strcmp(tmp,"output_POV_T") == 0)
+					{
+						config->output_POV_T = 1;
+						//printf("OUTput POV_T enabled !! \n");
+					}
 
-                                       // check for output of POV_H sentence
-                                        if (strcmp(tmp,"output_POV_H") == 0)
-                                        {
-                                                config->output_POV_H = 1;
-                                                //printf("OUTput POV_H enabled !! \n");
-                                        }
+				       // check for output of POV_H sentence
+					if (strcmp(tmp,"output_POV_H") == 0)
+					{
+						config->output_POV_H = 1;
+						//printf("OUTput POV_H enabled !! \n");
+					}
 
 					// check for static_sensor
 					if (strcmp(tmp,"static_sensor") == 0)
@@ -178,8 +178,8 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					if (strcmp(tmp,"voltage_config") == 0)
 					{
 						// get config data for dynamic sensor
-					        sscanf(line, "%19s %f %f", tmp, &voltage_sensor->scale,&voltage_sensor->offset);
-					        voltage_sensor->scale=1.0/voltage_sensor->scale;
+						sscanf(line, "%19s %f %f", tmp, &voltage_sensor->scale,&voltage_sensor->offset);
+						voltage_sensor->scale=1.0/voltage_sensor->scale;
 					}
 
 					// check for temperature sensor config
