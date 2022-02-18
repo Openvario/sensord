@@ -52,8 +52,7 @@ int calibrate_ams5915(t_eeprom_data* data)
 
 	//initialize differential pressure sensor
 	ams5915_init(&dynamic_sensor);
-	clock_gettime(CLOCK_REALTIME,&sensor_prev);
-	sensor_wait(112500);
+	usleep(112500);
 	clock_gettime(CLOCK_REALTIME,&sensor_prev);
 
 	for (i=0;i<800;i++)
