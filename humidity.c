@@ -39,7 +39,7 @@ int si7021_crc_check(unsigned int value, uint8_t crc)
 
 int sht4x_open (t_ds2482 *sensor, unsigned char i2c_address) {
 
-	char data[6]={0x94,0x89,0,0,0,0};
+	uint8_t data[6]={0x94,0x89,0,0,0,0};
 
 	sensor->fd = open(I2C_DEVICE, O_RDWR);
 	if (sensor->fd < 0) {
@@ -103,8 +103,8 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 		return 1;
 	}
 
-	char data[8]={0xfe,0xe6,131,0,0xe7,0x1e,0x08,0x0a};
-	char data2[4]={0xfa,0x0f,0xfc,0xc9};
+	uint8_t data[8]={0xfe,0xe6,131,0,0xe7,0x1e,0x08,0x0a};
+	uint8_t data2[4]={0xfa,0x0f,0xfc,0xc9};
 
 	if (write(sensor->fd,data+5,1)!=1) {                                    // Do HTU31D soft reset
 		struct timespec nstime = {0,15e6};
@@ -235,7 +235,7 @@ int si7021_start_temp (t_ds2482 *sensor) {
 
 int si7021_read_temp (t_ds2482 *sensor) {
 
-	char data[3];
+	uint8_t data[3];
 	double temp;
 
 	switch (sensor->sensor_type) {
@@ -253,7 +253,7 @@ int si7021_read_temp (t_ds2482 *sensor) {
 }
 
 int si7021_read_humidity (t_ds2482 *sensor) {
-	char data[6],x,y;
+	uint8_t data[6],x,y;
 	double temp;
 
 	sensor->humidity_valid=0;
@@ -308,7 +308,7 @@ int si7021_read_humidity (t_ds2482 *sensor) {
 
 int si7021_configure_heater_value (t_ds2482 *sensor, int value)
 {
-	char data[3] = {0x51,0x00,0x11};
+	uint8_t data[3] = {0x51,0x00,0x11};
 
 	if (sensor->sensor_type==SI7021) {
 		data[1]=value&0xf;				// If SI7021 initialize the heat control register
@@ -324,7 +324,7 @@ int si7021_configure_heater_value (t_ds2482 *sensor, int value)
 
 int si7021_configure_heater_onoff (t_ds2482 *sensor, int value)
 {
-	char data[4] = {0xe7,0xe6,0x00,0x08};
+	uint8_t data[4] = {0xe7,0xe6,0x00,0x08};
 	if ((value!=0) && (value!=1)) return 6;
 	switch (sensor->sensor_type) {
 		case HTU31D:
