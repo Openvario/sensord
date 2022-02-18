@@ -47,6 +47,7 @@
 #include "vario.h"
 #include "AirDensity.h"
 #include "24c16.h"
+#include "wait.h"
 
 #define I2C_ADDR 0x76
 #define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)

@@ -24,7 +24,6 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <math.h>
-#include <time.h>
 #include <linux/i2c-dev.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -32,30 +31,8 @@
 #include <inttypes.h>
 #include "def.h"
 
-#define DELTA_TIME_US(T1, T2)   (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec))*1000000)
-
 extern int g_debug;
 extern FILE *fp_console;
-
-struct timespec sensor_prev;
-
-float sensor_wait (float time)
-{
-	struct timespec curtime;
-
-	clock_gettime(CLOCK_REALTIME,&curtime);
-	curtime.tv_nsec=((long int) time)*1000 - (curtime.tv_nsec+(curtime.tv_sec-sensor_prev.tv_sec)*1e9 - sensor_prev.tv_nsec);
-	if (curtime.tv_nsec>1e9) {
-		curtime.tv_sec=curtime.tv_nsec/1e9;
-		curtime.tv_nsec-=curtime.tv_sec*1e9;
-	} else {
-		curtime.tv_sec=0;
-		if (curtime.tv_nsec<0) curtime.tv_nsec=0;
-	}
-	while (nanosleep(&curtime,&curtime)) ;
-	clock_gettime(CLOCK_REALTIME,&curtime);
-	return (DELTA_TIME_US(curtime,sensor_prev)-time);
-}
 
 /**
 * @brief Establish connection to MS5611 pressure sensor

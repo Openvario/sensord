@@ -18,7 +18,7 @@
 
 #include "24c16.h"
 #include "ams5915.h"
-#include "ms5611.h"
+#include "wait.h"
 #include "sensorcal.h"
 #include <stdio.h>
 #include <string.h>
