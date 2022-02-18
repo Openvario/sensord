@@ -27,16 +27,16 @@ static struct timespec sensor_prev;
 
 void sensor_wait_mark(void)
 {
-	clock_gettime(CLOCK_REALTIME, &sensor_prev);
+	clock_gettime(CLOCK_MONOTONIC, &sensor_prev);
 }
 
 float sensor_wait (float time)
 {
 	struct timespec until = sensor_prev;
 	timespec_add_us(&until, time);
-	while (clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &until, NULL)) {}
+	while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &until, NULL)) {}
 
 	struct timespec curtime;
-	clock_gettime(CLOCK_REALTIME,&curtime);
+	clock_gettime(CLOCK_MONOTONIC, &curtime);
 	return timespec_delta_us(&curtime, &sensor_prev) - time;
 }

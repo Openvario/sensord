@@ -265,7 +265,7 @@ void pressure_measurement_handler(void)
 
 
 	// Initialize timers if first time through.
-	if (meas_counter==1) clock_gettime(CLOCK_REALTIME,&kalman_prev);
+	if (meas_counter==1) clock_gettime(CLOCK_MONOTONIC, &kalman_prev);
 
 	// read ADS1110
 	if (voltage_sensor.present && (meas_counter%4==0))
@@ -416,7 +416,7 @@ void pressure_measurement_handler(void)
 				struct timespec kalman_cur;
 
 				tep_sensor.valid=1;
-				clock_gettime(CLOCK_REALTIME,&kalman_cur);
+				clock_gettime(CLOCK_MONOTONIC, &kalman_cur);
 				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, timespec_delta_s(&kalman_cur, &kalman_prev));
 				kalman_prev=kalman_cur;
 			}
