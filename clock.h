@@ -31,3 +31,18 @@ static inline float timespec_delta_us(const struct timespec *a,
 {
 	return timespec_delta_s(a, b) * 1000000;
 }
+
+static inline void timespec_add_ns(struct timespec *t, unsigned long ns)
+{
+	t->tv_nsec += ns;
+
+	if (t->tv_nsec > 1000000000) {
+		t->tv_nsec -= 1000000000;
+		++t->tv_sec;
+	}
+}
+
+static inline void timespec_add_us(struct timespec *t, unsigned long us)
+{
+	timespec_add_ns(t, us * 1000);
+}

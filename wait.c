@@ -21,23 +21,17 @@
 #include "clock.h"
 
 #include <time.h>
+#include <stdint.h>
 
 struct timespec sensor_prev;
 
 float sensor_wait (float time)
 {
-	struct timespec curtime;
+	struct timespec until = sensor_prev;
+	timespec_add_us(&until, time);
+	while (clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &until, NULL)) {}
 
-	clock_gettime(CLOCK_REALTIME,&curtime);
-	curtime.tv_nsec=((long int) time)*1000 - (curtime.tv_nsec+(curtime.tv_sec-sensor_prev.tv_sec)*1e9 - sensor_prev.tv_nsec);
-	if (curtime.tv_nsec>1e9) {
-		curtime.tv_sec=curtime.tv_nsec/1e9;
-		curtime.tv_nsec-=curtime.tv_sec*1e9;
-	} else {
-		curtime.tv_sec=0;
-		if (curtime.tv_nsec<0) curtime.tv_nsec=0;
-	}
-	while (nanosleep(&curtime,&curtime)) ;
+	struct timespec curtime;
 	clock_gettime(CLOCK_REALTIME,&curtime);
 	return timespec_delta_us(&curtime, &sensor_prev) - time;
 }
