@@ -16,11 +16,11 @@
     You should have received a copy of the GNU General Public License
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
+#pragma once
 
-#define VERSION_MAJOR '0'
-#define VERSION_MINOR '3'
-#define VERSION_RELEASE '5'
+/**
+ * Mark the current time stamp as the beginning of the waiting period.
+ */
+void sensor_wait_mark(void);
 
-#ifndef VERSION_GIT
-#error "git version not known !!"
-#endif
+float sensor_wait (float time);

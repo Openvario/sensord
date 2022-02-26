@@ -1,24 +1,23 @@
-/*  
+/*
 	sensord - Sensor Interface for XCSoar Glide Computer - http://www.openvario.org/
     Copyright (C) 2014  The openvario project
-    A detailed list of copyright holders can be found in the file "AUTHORS" 
+    A detailed list of copyright holders can be found in the file "AUTHORS"
 
-    This program is free software; you can redistribute it and/or 
-    modify it under the terms of the GNU General Public License 
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
     as published by the Free Software Foundation; either version 3
     of the License, or (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program; if not, see <http://www.gnu.org/licenses/>.	
+    along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 
-#include <time.h>
 #include <stdint.h>
 
 // variable definitions
@@ -57,8 +56,6 @@ typedef struct {
 	int secordcomp;
 } t_ms5611;
 
-extern struct timespec sensor_prev;
-
 // prototypes
 int ms5611_init(t_ms5611 *);
 int ms5611_reset(t_ms5611 *);
@@ -71,5 +68,3 @@ int ms5611_read_pressure(t_ms5611 *);
 int ms5611_read_temp(t_ms5611 *, int);
 int ms5611_start_temp(t_ms5611 *);
 int ms5611_start_pressure(t_ms5611 *);
-float sensor_wait (float time);
-

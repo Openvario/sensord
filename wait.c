@@ -17,10 +17,26 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#define VERSION_MAJOR '0'
-#define VERSION_MINOR '3'
-#define VERSION_RELEASE '5'
+#include "wait.h"
+#include "clock.h"
 
-#ifndef VERSION_GIT
-#error "git version not known !!"
-#endif
+#include <time.h>
+#include <stdint.h>
+
+static struct timespec sensor_prev;
+
+void sensor_wait_mark(void)
+{
+	clock_gettime(CLOCK_MONOTONIC, &sensor_prev);
+}
+
+float sensor_wait (float time)
+{
+	struct timespec until = sensor_prev;
+	timespec_add_us(&until, time);
+	while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &until, NULL)) {}
+
+	struct timespec curtime;
+	clock_gettime(CLOCK_MONOTONIC, &curtime);
+	return timespec_delta_us(&curtime, &sensor_prev) - time;
+}

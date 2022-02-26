@@ -16,11 +16,33 @@
     You should have received a copy of the GNU General Public License
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
+#pragma once
 
-#define VERSION_MAJOR '0'
-#define VERSION_MINOR '3'
-#define VERSION_RELEASE '5'
+#include <time.h>
 
-#ifndef VERSION_GIT
-#error "git version not known !!"
-#endif
+static inline float timespec_delta_s(const struct timespec *a,
+				     const struct timespec *b)
+{
+	return ((a->tv_sec+1.0e-9*a->tv_nsec)-(b->tv_sec+1.0e-9*b->tv_nsec));
+}
+
+static inline float timespec_delta_us(const struct timespec *a,
+				      const struct timespec *b)
+{
+	return timespec_delta_s(a, b) * 1000000;
+}
+
+static inline void timespec_add_ns(struct timespec *t, unsigned long ns)
+{
+	t->tv_nsec += ns;
+
+	if (t->tv_nsec > 1000000000) {
+		t->tv_nsec -= 1000000000;
+		++t->tv_sec;
+	}
+}
+
+static inline void timespec_add_us(struct timespec *t, unsigned long us)
+{
+	timespec_add_ns(t, us * 1000);
+}

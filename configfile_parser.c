@@ -1,20 +1,20 @@
-/*  
+/*
 	sensord - Sensor Interface for XCSoar Glide Computer - http://www.openvario.org/
     Copyright (C) 2014  The openvario project
-    A detailed list of copyright holders can be found in the file "AUTHORS" 
+    A detailed list of copyright holders can be found in the file "AUTHORS"
 
-    This program is free software; you can redistribute it and/or 
-    modify it under the terms of the GNU General Public License 
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
     as published by the Free Software Foundation; either version 3
     of the License, or (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program; if not, see <http://www.gnu.org/licenses/>.	
+    along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdio.h>
@@ -39,7 +39,7 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 	char line[70];
 	char tmp[20],tmp2[20];
 	float data;
-		
+
 	// is config file used ??
 	if (fp)
 	{
@@ -49,48 +49,48 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 			// get line from config file
 			if (fgets(line, 70, fp)!=NULL) {
 				//printf("getting line: '%69s'\n", line);
-			
+
 				// check if line is comment
 				if((!(line[0] == '#')) && (!(line[0] == '\n')))
 				{
-				
+
 					// get first config tag
 					sscanf(line, "%19s", tmp);
-					
+
 					// check for output of POV_E sentence
 					if (strcmp(tmp,"output_POV_E") == 0)
-					{	
+					{
 						config->output_POV_E = 1;
 						//printf("OUTput POV_E enabled !! \n");
 					}
-					
+
 					// check for output of POV_P_Q sentence
 					if (strcmp(tmp,"output_POV_P_Q") == 0)
-					{	
+					{
 						config->output_POV_P_Q = 1;
 						//printf("OUTput POV_P_Q enabled !! \n");
 					}
-					
+
 					// check for output of POV_V sentence
 					if (strcmp(tmp,"output_POV_V") == 0)
-					{	
+					{
 						config->output_POV_V= 1;
 						//printf("OUTput POV_V enabled !! \n");
 					}
-						
+
 					// check for output of POV_T sentence
-                	                if (strcmp(tmp,"output_POV_T") == 0)
-                        	        {
-                                	        config->output_POV_T = 1;
-                                        	//printf("OUTput POV_T enabled !! \n");
-	                                }
-	
-                                       // check for output of POV_H sentence
-                                        if (strcmp(tmp,"output_POV_H") == 0)
-                                        {
-                                                config->output_POV_H = 1;
-                                                //printf("OUTput POV_H enabled !! \n");
-                                        }
+					if (strcmp(tmp,"output_POV_T") == 0)
+					{
+						config->output_POV_T = 1;
+						//printf("OUTput POV_T enabled !! \n");
+					}
+
+				       // check for output of POV_H sentence
+					if (strcmp(tmp,"output_POV_H") == 0)
+					{
+						config->output_POV_H = 1;
+						//printf("OUTput POV_H enabled !! \n");
+					}
 
 					// check for static_sensor
 					if (strcmp(tmp,"static_sensor") == 0)
@@ -126,13 +126,13 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 						// get compensation data for static sensor
 						sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->comp2, &static_sensor->comp1, &static_sensor->comp0);
 					}
-	
+
 					if (strcmp(tmp,"static_Pcomp") == 0)
 					{
 						// get pressure compensation data for static sensor
 						sscanf(line, "%19s %lf %lf %lf",tmp, &static_sensor->Pcomp2, &static_sensor->Pcomp1, &static_sensor->Pcomp0);
 					}
-	
+
 					// check for tek_sensor
 					if (strcmp(tmp,"tek_sensor") == 0)
 					{
@@ -140,54 +140,54 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 						sscanf(line, "%19s %f %f", tmp, &tek_sensor->offset, &tek_sensor->linearity);
 						tek_sensor->offset*=16;
 					}
-	
+
 					if (strcmp(tmp,"tek_comp") == 0)
 					{
 						// get compensation data for tek sensor
 						sscanf (line, "%19s %lf %lf %lf",tmp, &tek_sensor->comp2, &tek_sensor->comp1, &tek_sensor->comp0);
 					}
-	
+
 					if (strcmp(tmp,"tek_Pcomp") == 0)
 					{
 						// get pressure compensation data for tek sensor
 						sscanf(line, "%19s %lf %lf %lf",tmp, &tek_sensor->Pcomp2, &tek_sensor->Pcomp1, &tek_sensor->Pcomp0);
 					}
-					
+
 					// check for glitch watchdog_timing
 					if (strcmp(tmp,"glitch_timing") == 0)
 					{
 						// get config data for glitch watchdog timer
 						sscanf(line, "%19s %lf %lf %lf", tmp, &config->timing_log, &config->timing_mult, &config->timing_off);
 					}
-	
+
 					// check for dynamic_sensor
 					if (strcmp(tmp,"dynamic_sensor") == 0)
 					{
 						// get config data for dynamic sensor
 						sscanf(line, "%19s %f %f", tmp, &dynamic_sensor->offset, &dynamic_sensor->linearity);
 					}
-					
+
 					// check for vario config
 					if (strcmp(tmp,"vario_config") == 0)
 					{
 						// get config data for dynamic sensor
 						sscanf(line, "%19s %f", tmp, &config->vario_x_accel);
 					}
-					
+
 					// check for voltage sensor config
 					if (strcmp(tmp,"voltage_config") == 0)
 					{
 						// get config data for dynamic sensor
-					        sscanf(line, "%19s %f %f", tmp, &voltage_sensor->scale,&voltage_sensor->offset);
-					        voltage_sensor->scale=1.0/voltage_sensor->scale;
+						sscanf(line, "%19s %f %f", tmp, &voltage_sensor->scale,&voltage_sensor->offset);
+						voltage_sensor->scale=1.0/voltage_sensor->scale;
 					}
-	
+
 					// check for temperature sensor config
 					if (strcmp(tmp,"temp_databits") == 0) {
 						// get config data for temperature sensor
 						sscanf(line,"%19s %d",tmp, &temp_sensor->databits);
 					}
-	
+
 					// check for temperature sensor sample rate
 					if (strcmp(tmp,"temp_rate") == 0) {
 						// get config data for temperature sensor sample rate
@@ -199,7 +199,7 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 
 				}
 			}
-			
+
 		}
 		return(1);
 	}

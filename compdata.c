@@ -1,15 +1,15 @@
 /*  sensord - Sensor Interface for XCSoar Glide Computer - http://www.openvario.org/
     Copyright (C) 2014  The openvario project
-    A detailed list of copyright holders can be found in the file "AUTHORS" 
+    A detailed list of copyright holders can be found in the file "AUTHORS"
 
-    This program is free software; you can redistribute it and/or 
-    modify it under the terms of the GNU General Public License 
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
     as published by the Free Software Foundation; either version 3
     of the License, or (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
@@ -47,14 +47,14 @@
 #include "vario.h"
 #include "AirDensity.h"
 #include "24c16.h"
+#include "wait.h"
 
 #define I2C_ADDR 0x76
 #define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
 #define TEMP_SAMPLE_RATE 		5	// sample rate of temp values (Hz)
 #define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
- 
+
 #define MEASTIMER (SIGRTMAX)
-#define DELTA_TIME(T1,T2)       (((T1.tv_sec+1.0e-9*T1.tv_nsec)-(T2.tv_sec+1.0e-9*T2.tv_nsec)))
 
 // Sensor objects
 t_ms5611 static_sensor;
@@ -104,41 +104,42 @@ enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
 /**
 * @brief Signal handler if sensord will be interrupted
 * @param sig_num
-* @return 
-* 
+* @return
+*
 * Signal handler for catching STRG-C singal from command line
 * Closes all open files handles like log files
 * @date 17.04.2014 born
 
-*/ 
+*/
 void sigintHandler(int sig_num){
+	(void)sig_num;
 
 	signal(SIGINT, sigintHandler);
-	
+
 	// if sensordata from file
 	if (fp_sensordata != NULL)
 		fclose(fp_sensordata);
-		
+
 	//close fp_config if used
 	if (fp_config != NULL)
 		fclose(fp_config);
-	
+
 	//fclose(fp_rawlog);
 	printf("Exiting ...\n");
 	fclose(fp_console);
-	
+
 	exit(0);
 }
 
 /**
 * @brief Timming routine for pressure measurement
-* @param 
-* @return 
-* 
+* @param
+* @return
+*
 * Timing handler to coordinate pressure measurement
 * @date 17.04.2014 born
 *
-*/ 
+*/
 void pressure_measurement_handler(int record)
 {
 	static unsigned int meas_counter=1, glitchstart=0,shutdown=0,deltaxmax=0;
@@ -153,7 +154,7 @@ void pressure_measurement_handler(int record)
 		x|=ms5611_read_temp(&tep_sensor,glitch);
 		x|=ms5611_read_pressure(&static_sensor);
 		x|=ms5611_start_pressure(&tep_sensor);
-		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		sensor_wait_mark();
 		x|=ms5611_start_temp(&static_sensor);
 
 		if (abs((int)static_sensor.D1l-(int) static_sensor.D1)<100e3) {
@@ -192,13 +193,13 @@ void pressure_measurement_handler(int record)
 				static_sensor.D1f=(static_sensor.D1f*7+static_sensor.D1)>>3;
 				ms5611_calculate_pressure(&static_sensor);
 			}
-		}	 
+		}
 	} else {
 		// read pressure sensors
 		x|=ms5611_read_pressure(&tep_sensor);
 		x|=ms5611_read_temp(&static_sensor,glitch);
 		x|=ms5611_start_temp(&tep_sensor);
-		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		sensor_wait_mark();
 		x|=ms5611_start_pressure(&static_sensor);
 
 		if (abs((int)tep_sensor.D1l-(int) tep_sensor.D1)<100e3) {
@@ -265,7 +266,7 @@ void polyfit (double val[][3], int idx, double pf[], double rmserr[])
 		x[3]+=tmp*tmp;
 		y[1]+=val[i][0]*val[i][1];
 		y[2]+=val[i][0]*tmp;
-        }
+	}
 	det=x[3]*(x[1]*idx-x[0]*x[0])-x[2]*(x[2]*idx-x[0]*x[1])+x[1]*(x[2]*x[0]-x[1]*x[1]);
 	inv[0][0]=x[1]*idx-x[0]*x[0];
 	inv[0][1]=-(x[2]*idx-x[1]*x[0]);
@@ -293,9 +294,9 @@ void polyfit (double val[][3], int idx, double pf[], double rmserr[])
 	rmserr[2]=sqrt(det/idx);
 	rmserr[1]=sqrt(det2/idx);
 }
-	
+
 int main (int argc, char **argv) {
-	
+
 	// local variables
 	int iter=300,ch,pos=0,oldpos=0,i=0;
 	double pf[2][3], rmserr[2][3];
@@ -304,9 +305,9 @@ int main (int argc, char **argv) {
 	char colors[2][6] ={{0x1b,'[','0','m',0},{0x1b,'[','3','1','m',0}};
 	// signals and action handlers
 	struct sigaction sigact;
-		
+
 	// socket communication
-	
+
 	// initialize variables
 	static_sensor.offset = 0.0;
 	static_sensor.linearity = 1.0;
@@ -323,14 +324,14 @@ int main (int argc, char **argv) {
 
 	//open file for raw output
 	//fp_rawlog = fopen("raw.log","w");
-		
+
 	//parse command line arguments
 	cmdline_parser(argc, argv, &io_mode);
 
 	// get config file options
 	if (fp_config != NULL)
 		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &temp_sensor, &config);
-	
+
 	// check if we are a daemon or stay in foreground
 	// stay in foreground
 	// install signal handler for CTRL-C
@@ -347,7 +348,7 @@ int main (int argc, char **argv) {
 
 	// close the standard file descriptors
 	//close(STDOUT_FILENO);
-	close(STDERR_FILENO);	
+	close(STDERR_FILENO);
 	// ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
 	// we need hardware sensors for running !!
@@ -364,12 +365,12 @@ int main (int argc, char **argv) {
 	printf ("This program calculates compensation data to compensate for timing glitches on the static and tek sensors.\nThe pressure sensors are sensitive to air movement.\nFor best results, ensure the air is as still as possible when taking measurements.\nHow many thousand data points? %s\033[4D",valstr);
 	do {
 		ch=getc(stdin);
-		if (ch==0x1b) 
-			if (getc(stdin)==0x5b) 
+		if (ch==0x1b)
+			if (getc(stdin)==0x5b)
 				ch=getc(stdin)+256;
 		if ((ch==0x143) && (pos<3)) pos++;
 		if ((ch==0x144) && (pos>0)) pos--;
-		if (ch==0x141) 
+		if (ch==0x141)
 			switch (pos) {
 				case 0: iter+=1000;
 					break;
@@ -380,7 +381,7 @@ int main (int argc, char **argv) {
 				case 3: iter+=1;
 					break;
 			}
-		if (ch==0x142) 
+		if (ch==0x142)
 			switch (pos) {
 				case 0: iter-=1000;
 					break;
@@ -391,7 +392,7 @@ int main (int argc, char **argv) {
 				case 3: iter-=1;
 					break;
 			}
-		if ((ch>='0') && (ch<='9')) { 
+		if ((ch>='0') && (ch<='9')) {
 			valstr[pos]=ch;
 			sscanf (valstr,"%d",&iter);
 		}
@@ -410,22 +411,21 @@ int main (int argc, char **argv) {
 
 	tcgetattr( 0, &tio );
 	tio.c_lflag |= ICANON | ECHO;
-	tcsetattr( 0, TCSANOW, &tio ); 
+	tcsetattr( 0, TCSANOW, &tio );
 
 	if (ms5611_open(&static_sensor, 0x76) != 0)
 	{
 		fprintf(stderr, "Open static sensor failed !!\n");
 		return 1;
 	}
-	
+
 	//initialize static pressure sensor
 	ms5611_reset(&static_sensor);
-	clock_gettime(CLOCK_REALTIME,&sensor_prev);
-	sensor_wait(10e3);
+	usleep(10000);
 	ms5611_init(&static_sensor);
 	static_sensor.secordcomp = g_secordcomp;
 	static_sensor.valid = 1;
-				
+
 	// open sensor for velocity pressure
 	/// @todo remove hardcoded i2c address for velocity pressure
 	if (ms5611_open(&tep_sensor, 0x77) != 0)
@@ -433,25 +433,24 @@ int main (int argc, char **argv) {
 		fprintf(stderr, "Open tep sensor failed !!\n");
 		return 1;
 	}
-		
+
 	//initialize tep pressure sensor
 	ms5611_reset(&tep_sensor);
 
-	clock_gettime(CLOCK_REALTIME,&sensor_prev);
-	sensor_wait(10e3);
+	usleep(10000);
 	ms5611_init(&tep_sensor);
 	tep_sensor.secordcomp = g_secordcomp;
 	tep_sensor.valid = 1;
-		
+
 	// poll sensors for offset compensation
 	tep_sensor.D2f=static_sensor.D2f=0;
 	for (i=0;i<120;++i)
 	{
 		ms5611_start_temp(&static_sensor);
 		ms5611_start_temp(&tep_sensor);
-		if (i==0) clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		if (i==0) sensor_wait_mark();
 		sensor_wait(12500);
-		clock_gettime(CLOCK_REALTIME,&sensor_prev);
+		sensor_wait_mark();
 		ms5611_read_temp(&static_sensor,0);
 		ms5611_read_temp(&tep_sensor,0);
 	}
@@ -459,14 +458,14 @@ int main (int argc, char **argv) {
 	ms5611_start_pressure(&static_sensor);
 	ms5611_start_temp(&tep_sensor);
 	sensor_wait(12500);
-	clock_gettime(CLOCK_REALTIME,&sensor_prev);
+	sensor_wait_mark();
 
 	ms5611_read_pressure(&static_sensor);
 	ms5611_read_temp(&tep_sensor,0);
 	ms5611_start_pressure(&tep_sensor);
 	ms5611_start_temp(&static_sensor);
 	sensor_wait(12500);
-	clock_gettime(CLOCK_REALTIME,&sensor_prev);
+	sensor_wait_mark();
 
 	ms5611_read_pressure(&tep_sensor);
 	ms5611_read_temp(&static_sensor,0);
@@ -474,17 +473,17 @@ int main (int argc, char **argv) {
 	ms5611_calculate_pressure(&static_sensor);
 	ms5611_start_temp(&tep_sensor);
 	ms5611_start_pressure(&static_sensor);
-	for (i=0;i<1000;++i) 
+	for (i=0;i<1000;++i)
 		pressure_measurement_handler(0);
 	// main data acquisition loop
 
-	for (i=0;sidx<iter;) 
+	for (i=0;sidx<iter;)
 	{
 		if (noglitch>29) sensor_wait(250e3);
 		pressure_measurement_handler(1);
-		if ((sidx%1000)==0) { 
-			if (i==0) { 
-				printf ("%d points collected.\n",sidx); 
+		if ((sidx%1000)==0) {
+			if (i==0) {
+				printf ("%d points collected.\n",sidx);
 				i=1;
 			}
 		} else i=0;
@@ -498,20 +497,20 @@ int main (int argc, char **argv) {
 	pos=0;
 	printf ("Total data points (the more the better): static: %d, tek: %d\n",sidx, tidx);
 	if (rmserr[0][2]>=80) i=3; else i=0;
-	if (rmserr[1][2]>=80) i|=5; 
+	if (rmserr[1][2]>=80) i|=5;
 	printf ("%s\tTotal RMS Error (lower is better, ideally below 80): static: %s%f%s, tek: %s%f%s\n",goodbadstr[i&1],colors[(i>>1)&1],rmserr[0][2],colors[0],colors[(i>>2)&1],rmserr[1][2],colors[0]);
 	pos|=i;
 	if (rmserr[0][0]>=1e-3) i=3; else i=0;
-	if (rmserr[1][0]>=1e-3) i|=5; 
+	if (rmserr[1][0]>=1e-3) i|=5;
 	printf ("%s\tMean Error (This should be very close to zero): static %s%f%s, tek: %s%f%s\n",goodbadstr[i&1],colors[(i>>1)&1],rmserr[0][0],colors[0],colors[(i>>2)&1],rmserr[1][0],colors[0]);
 	pos|=i;
 	if (rmserr[0][1]>=80) i=3; else i=0;
-	if (rmserr[1][1]>=80) i|=5; 
+	if (rmserr[1][1]>=80) i|=5;
 	printf ("%s\tStd Deviation of Error (should be RMS error or slightly less): static: %s%f%s, tek: %s%f%s\n",goodbadstr[i&1],colors[(i>>1)&1],rmserr[0][1],colors[0],colors[(i>>2)&1],rmserr[1][1],colors[0]);
 	pos|=i;
 	if (urun>0) i=3; else i=0;
 	if (orun>0) i|=5;
-	if (i) printf ("%s\tGlitches (zero is ideal), Underrun: %s%d%s, Overrun: %s%d%s\n",goodbadstr[1],colors[(i>>1)&1],urun,colors[0],colors[(i>>2)&1],orun,colors[0]); 
+	if (i) printf ("%s\tGlitches (zero is ideal), Underrun: %s%d%s, Overrun: %s%d%s\n",goodbadstr[1],colors[(i>>1)&1],urun,colors[0],colors[(i>>2)&1],orun,colors[0]);
 	else printf ("%s\tNo overruns/underruns errors found during glitches.\n",goodbadstr[0]);
 	pos|=i;
 	printf ("static_comp %.10lf %.10lf %.10lf\ntek_comp %.10lf %.10lf %.10lf\n",pf[0][0],pf[0][1],pf[0][2],pf[1][0],pf[1][1],pf[1][2]);
@@ -528,7 +527,7 @@ int main (int argc, char **argv) {
 	if ((0<pf[1][2]) || (pf[1][2]<-50)) i|=5;
 	printf ("%s\t0 > constant term (%s%6.5f%s and %s%6.5f%s) > -50\n",goodbadstr[i&1],colors[(i>>1)&1],pf[0][2],colors[0],colors[(i>>2)&1],pf[1][2],colors[0]);
 	pos=(pos|i)&1;
-	if (pos) 
+	if (pos)
 		printf ("These results could be better.  Suggest trying again.\n");
 	else
 		printf ("These results are good.\n");
@@ -557,7 +556,7 @@ int main (int argc, char **argv) {
 		tcsetattr( 0, TCSANOW, &tio );
 
 		if (pos==0) {
-			printf ("Saving...\n");	
+			printf ("Saving...\n");
 			fprintf(fp_config,"\nstatic_comp %.10lf %.10lf %.10lf\ntek_comp %.10lf %.10lf %.10lf\n",pf[0][0],pf[0][1],pf[0][2],pf[1][0],pf[1][1],pf[1][2]);
 		}
 		fclose (fp_config);
