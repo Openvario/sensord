@@ -17,10 +17,11 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
-#include <string.h>
 #include "nmea.h"
 #include "def.h"
+
+#include <stdio.h>
+#include <string.h>
 
 extern int g_debug;
 extern FILE *fp_console;

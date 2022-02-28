@@ -17,19 +17,17 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "configfile_parser.h"
+#include "ds2482.h"
+#include "ms5611.h"
+#include "ams5915.h"
+#include "ads1110.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
-
-#include "def.h"
-
-#include "ds2482.h"
-#include "ms5611.h"
-#include "ams5915.h"
-#include "ads1110.h"
-#include "configfile_parser.h"
 
 extern int g_debug;
 extern FILE *fp_console;

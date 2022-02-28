@@ -17,6 +17,8 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#pragma once
+
 #include "main.h"
 
 void cmdline_parser(int argc, char **argv, t_io_mode *);

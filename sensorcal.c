@@ -16,10 +16,11 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "sensorcal.h"
 #include "24c16.h"
 #include "ams5915.h"
 #include "wait.h"
-#include "sensorcal.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>

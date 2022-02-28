@@ -19,6 +19,8 @@ rio.org/
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#pragma once
+
 // define struct for DS2482 sensor
 
 #define AUTO 0

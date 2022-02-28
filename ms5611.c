@@ -18,6 +18,7 @@
 */
 
 #include "ms5611.h"
+#include "def.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -29,7 +30,6 @@
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
-#include "def.h"
 
 extern int g_debug;
 extern FILE *fp_console;

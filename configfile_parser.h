@@ -17,6 +17,15 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#pragma once
+
+#include "ms5611.h"
+#include "ams5915.h"
+#include "ads1110.h"
+#include "ds2482.h"
+
+#include <stdio.h>
+
 typedef struct {
 	char output_POV_E;
 	char output_POV_P_Q;

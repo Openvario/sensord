@@ -22,6 +22,7 @@ Copyright_License {
 */
 
 #include "AirDensity.h"
+
 #include <math.h>
 
 #define isa_sea_level_density 1.225

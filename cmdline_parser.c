@@ -17,14 +17,14 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "main.h"
+#include "cmdline_parser.h"
 #include "version.h"
+#include "def.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include "def.h"
-
 
 extern char config_filename[50];
 extern int g_debug;

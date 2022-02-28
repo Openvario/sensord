@@ -25,6 +25,12 @@
 // Note: The only sensor that has been tested is the HTU21D, the routines
 // support the use of the heater function, but it is NOT used by sensord
 
+#pragma once
+
+#include "ds2482.h"
+
+#include <stdint.h>
+
 int si7021_crc_check (unsigned int, uint8_t);
 int sht4x_open (t_ds2482 *, unsigned char);
 int si7021_open (t_ds2482 *, unsigned char);

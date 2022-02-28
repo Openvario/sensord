@@ -1,3 +1,5 @@
+#include "humidity.h"
+
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -7,8 +9,6 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-#include "ds2482.h"
-#include "humidity.h"
 
 extern int g_debug;
 extern FILE *fp_console;

@@ -17,6 +17,8 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#pragma once
+
 #include <time.h>
 #include <stdint.h>
 

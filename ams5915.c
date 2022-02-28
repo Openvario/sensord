@@ -18,6 +18,8 @@
 */
 
 #include "ams5915.h"
+#include "def.h"
+
 #include <time.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
@@ -29,7 +31,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include "def.h"
 
 extern int g_debug;
 extern FILE *fp_console;

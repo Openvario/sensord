@@ -16,6 +16,23 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "main.h"
+#include "cmdline_parser.h"
+#include "nmea.h"
+#include "def.h"
+#include "KalmanFilter1d.h"
+#include "ds2482.h"
+#include "humidity.h"
+#include "ms5611.h"
+#include "ams5915.h"
+#include "ads1110.h"
+#include "configfile_parser.h"
+#include "vario.h"
+#include "AirDensity.h"
+#include "24c16.h"
+#include "wait.h"
+#include "clock.h"
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <fcntl.h>
@@ -33,22 +50,6 @@
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include <syslog.h>
-//#include "version.h"
-#include "nmea.h"
-#include "def.h"
-#include "KalmanFilter1d.h"
-#include "cmdline_parser.h"
-#include "ds2482.h"
-#include "humidity.h"
-#include "ms5611.h"
-#include "ams5915.h"
-#include "ads1110.h"
-#include "configfile_parser.h"
-#include "vario.h"
-#include "AirDensity.h"
-#include "24c16.h"
-#include "wait.h"
-#include "clock.h"
 
 #define I2C_ADDR 0x76
 #define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
