@@ -43,9 +43,6 @@ install: sensord sensorcal
 test: test.o obj/nmea.o
 	$(CC) -g -o $@ $^ $(LIBS)
 
-sensord_fastsample: sensord_fastsample.o
-	$(CC) -g -o $@ $^ $(LIBS)
-
 i2c_test: i2c_test.o ms5611.o
 	$(CC) $(LIBS) -g -o $@ $^
 
