@@ -51,14 +51,6 @@
 #include <arpa/inet.h>
 #include <syslog.h>
 
-#define I2C_ADDR 0x76
-#define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
-#define TEMP_SAMPLE_RATE 		5	// sample rate of temp values (Hz)
-#define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
-
-#define MEASTIMER (SIGRTMAX)
-
-timer_t  measTimer;
 int g_debug=0;
 int g_log=0;
 
@@ -77,7 +69,6 @@ t_config config;
 t_kalmanfilter1d vkf;
 
 // pressures
-float tep;
 float p_static;
 float p_dynamic;
 
@@ -92,12 +83,6 @@ FILE *fp_console=NULL;
 FILE *fp_sensordata=NULL;
 FILE *fp_datalog=NULL;
 FILE *fp_config=NULL;
-
-//FILE *fp_rawlog=NULL;
-
-enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
-
-//typedef enum { measure_only, record, replay} t_measurement_mode;
 
 /**
 * @brief Signal handler if sensord will be interrupted
@@ -122,7 +107,6 @@ void sigintHandler(int sig_num){
 	if (fp_sensordata != NULL)
 		fclose(fp_sensordata);
 
-	//fclose(fp_rawlog);
 	printf("Exiting ...\n");
 	fclose(fp_console);
 
@@ -549,9 +533,6 @@ int main (int argc, char **argv) {
 	config.output_POV_E      = config.output_POV_P_Q = config.output_POV_T = config.output_POV_H = 0;
 
 	temp_sensor.rollover = temp_sensor.maxrollover = temp_sensor.databits = temp_sensor.sensor_type = temp_sensor.compensate = 0;
-
-	//open file for raw output
-	//fp_rawlog = fopen("raw.log","w");
 
 	//parse command line arguments
 	cmdline_parser(argc, argv, &io_mode);

@@ -47,13 +47,6 @@
 #include <arpa/inet.h>
 #include <syslog.h>
 
-#define I2C_ADDR 0x76
-#define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
-#define TEMP_SAMPLE_RATE 		5	// sample rate of temp values (Hz)
-#define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
-
-#define MEASTIMER (SIGRTMAX)
-
 // Sensor objects
 t_ms5611 static_sensor;
 t_ms5611 tep_sensor;
@@ -64,7 +57,6 @@ t_ds2482 temp_sensor;
 
 t_config config;
 t_io_mode io_mode;
-timer_t  measTimer;
 int g_debug=0;
 int g_log=0;
 int sidx=0;
@@ -76,10 +68,6 @@ int noglitch=0;
 int idx=0;
 int urun=0;
 int orun=0;
-
-// pressures
-float tep;
-float p_static;
 
 int g_foreground=FALSE;
 int g_secordcomp=FALSE;
@@ -93,12 +81,6 @@ FILE *fp_datalog=NULL;
 //FILE *fp1=NULL;
 //FILE *fp2=NULL;
 
-//FILE *fp_rawlog=NULL;
-
-enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
-
-//typedef enum { measure_only, record, replay} t_measurement_mode;
-
 /**
 * @brief Signal handler if sensord will be interrupted
 * @param sig_num
@@ -109,7 +91,8 @@ enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
 * @date 17.04.2014 born
 
 */
-void sigintHandler(int sig_num){
+static void sigintHandler(int sig_num)
+{
 	(void)sig_num;
 
 	signal(SIGINT, sigintHandler);
@@ -118,7 +101,6 @@ void sigintHandler(int sig_num){
 	if (fp_sensordata != NULL)
 		fclose(fp_sensordata);
 
-	//fclose(fp_rawlog);
 	printf("Exiting ...\n");
 	fclose(fp_console);
 
@@ -134,7 +116,7 @@ void sigintHandler(int sig_num){
 * @date 17.04.2014 born
 *
 */
-void pressure_measurement_handler(int record)
+static void pressure_measurement_handler(int record)
 {
 	static unsigned int meas_counter=1, glitchstart=0,shutdown=0,deltaxmax=0;
 	int x=0, deltax;
@@ -243,7 +225,7 @@ void pressure_measurement_handler(int record)
 	}
 }
 
-void polyfit (double val[][3], int idx, double pf[], double rmserr[])
+static void polyfit(double val[][3], int idx, double pf[], double rmserr[])
 {
 	int i;
 	double  x[4], y[3], inv[3][3];
@@ -315,9 +297,6 @@ int main (int argc, char **argv) {
 	config.timing_log  = 0.06666666666;
 	config.timing_mult = 50;
 	config.timing_off  = 12;
-
-	//open file for raw output
-	//fp_rawlog = fopen("raw.log","w");
 
 	//parse command line arguments
 	cmdline_parser(argc, argv, &io_mode);

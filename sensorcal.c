@@ -29,7 +29,7 @@
 int g_debug=0;
 FILE *fp_console=NULL;
 
-int calibrate_ams5915(t_eeprom_data* data)
+static int calibrate_ams5915(t_eeprom_data* data)
 {
 	t_ams5915 dynamic_sensor;
 	float offset=0.0;
