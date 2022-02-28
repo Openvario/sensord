@@ -920,6 +920,12 @@ int main (int argc, char **argv) {
 	vkf.var_x_accel_ = config.vario_x_accel;
 	for(i=0; i < 1000; i++)
 		KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, 25e-3);
+
+	if (g_inetd) {
+		handle_connection(STDIN_FILENO);
+		return EXIT_SUCCESS;
+	}
+
 	while(1)
 	{
 		// socket communication

@@ -28,6 +28,7 @@
 char config_filename[50];
 
 bool g_foreground = false;
+bool g_inetd = false;
 bool g_secordcomp = false;
 bool tj = false;
 
@@ -45,6 +46,7 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 	const char* Usage = "\n"\
 	"  -v              print version information\n"\
 	"  -f              don't daemonize, stay in foreground\n"\
+	"  -i              inetd mode\n"\
 	"  -c [filename]   use config file [filename]\n"\
 	"  -d[n]           set debug level. n can be [1..2]. default=1\n"\
    	"  -j              turn on timing jitter... for testing only!\n"\
@@ -54,7 +56,7 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 	"\n";
 
 	// check commandline arguments
-	while ((c = getopt (argc, argv, "vd::fjlhr:p:c:s")) != -1)
+	while ((c = getopt (argc, argv, "vd::fijlhr:p:c:s")) != -1)
 	{
 		switch (c) {
 			case 'v':
@@ -107,6 +109,12 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 				// don't daemonize
 				fprintf(stderr, "!! STAY in g_foreground !!\n");
 				g_foreground = true;
+				break;
+
+			case 'i':
+				// inetd mode
+				g_foreground = true;
+				g_inetd = true;
 				break;
 
 			case 'j':

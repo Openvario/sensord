@@ -27,6 +27,7 @@
 extern char config_filename[50];
 
 extern bool g_foreground;
+extern bool g_inetd;
 extern bool g_secordcomp;
 extern bool tj;
 
