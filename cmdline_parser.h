@@ -21,13 +21,14 @@
 
 #include "main.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 
 extern char config_filename[50];
 
-extern int g_foreground;
-extern int g_secordcomp;
-extern int tj;
+extern bool g_foreground;
+extern bool g_secordcomp;
+extern bool tj;
 
 extern FILE *fp_sensordata;
 extern FILE *fp_datalog;

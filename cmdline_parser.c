@@ -19,7 +19,6 @@
 
 #include "cmdline_parser.h"
 #include "version.h"
-#include "def.h"
 #include "log.h"
 
 #include <stdlib.h>
@@ -28,9 +27,9 @@
 
 char config_filename[50];
 
-int g_foreground=FALSE;
-int g_secordcomp=FALSE;
-int tj=FALSE;
+bool g_foreground = false;
+bool g_secordcomp = false;
+bool tj = false;
 
 FILE *fp_sensordata=NULL;
 FILE *fp_datalog=NULL;
@@ -107,19 +106,19 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 			case 'f':
 				// don't daemonize
 				printf("!! STAY in g_foreground !!\n");
-				g_foreground = TRUE;
+				g_foreground = true;
 				break;
 
 			case 'j':
 				// Cause deliberate timing jitter
 				printf("!! Timing jitter on !!\n");
-				tj = TRUE;
+				tj = true;
 				break;
 
 			case 's':
 				// enable second order compensation
 				printf("Second order compensation ENABLE\n");
-				g_secordcomp = TRUE;
+				g_secordcomp = true;
 				break;
 
 			case 'r':
@@ -131,7 +130,7 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 					exit(EXIT_FAILURE);
 				}
 
-				io_mode->sensordata_to_file = TRUE;
+				io_mode->sensordata_to_file = true;
 				strcpy(datalog_filename, optarg);
 				printf("!! RECORD DATA TO %s !!\n", datalog_filename);
 
@@ -148,7 +147,7 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 					exit(EXIT_FAILURE);
 				}
 
-				io_mode->sensordata_from_file = TRUE;
+				io_mode->sensordata_from_file = true;
 				strcpy(sensordata_filename, optarg);
 				printf("!! REPLAY DATA FROM %s !!\n", sensordata_filename);
 				// Open the fp to replay file

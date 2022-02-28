@@ -19,7 +19,6 @@
 #include "main.h"
 #include "cmdline_parser.h"
 #include "nmea.h"
-#include "def.h"
 #include "KalmanFilter1d.h"
 #include "ds2482.h"
 #include "humidity.h"
@@ -243,7 +242,7 @@ static void pressure_measurement_handler(void)
 		ads1110_calculate(&voltage_sensor);
 	}
 
-	if (io_mode.sensordata_from_file != TRUE)
+	if (!io_mode.sensordata_from_file)
 	{
 		static int glitchstart = 0, deltaxmax = 0, shutoff = 0;
 
@@ -389,7 +388,7 @@ static void pressure_measurement_handler(void)
 				KalmanFiler1d_update(&vkf, tep_sensor.p/100, 0.25, timespec_delta_s(&kalman_cur, &kalman_prev));
 				kalman_prev=kalman_cur;
 			}
-			if (io_mode.sensordata_to_file == TRUE) {
+			if (io_mode.sensordata_to_file) {
 				if (tj)
 					fprintf(fp_datalog, "%.4f %.4f %f %u %u %u %u %u %u %u %u %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
 				else fprintf(fp_datalog, "%.4f,%.4f,%.4f\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p);
@@ -491,8 +490,8 @@ int main (int argc, char **argv) {
 	pid_t pid;
 	pid_t sid;
 
-	io_mode.sensordata_from_file = FALSE;
-	io_mode.sensordata_to_file = FALSE;
+	io_mode.sensordata_from_file = false;
+	io_mode.sensordata_to_file = false;
 
 	// signals and action handlers
 	struct sigaction sigact;
@@ -533,7 +532,7 @@ int main (int argc, char **argv) {
 	}
 
 	// check if we are a daemon or stay in foreground
-	if (g_foreground == TRUE)
+	if (g_foreground)
 	{
 		// stay in foreground
 		// install signal handler for CTRL-C
@@ -622,7 +621,7 @@ int main (int argc, char **argv) {
 	// print runtime config
 	print_runtime_config();
 
-	if (io_mode.sensordata_from_file != TRUE)
+	if (!io_mode.sensordata_from_file)
 	{
 		// we need hardware sensors for running !!
 		// open sensor for static pressure

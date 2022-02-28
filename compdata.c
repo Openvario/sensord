@@ -16,7 +16,6 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "def.h"
 #include "ds2482.h"
 #include "ms5611.h"
 #include "ams5915.h"
@@ -204,7 +203,7 @@ static void pressure_measurement_handler(int record)
 	}
 	if (glitch) noglitch=0; else noglitch++;
 	meas_counter++;
-	if (io_mode.sensordata_to_file == TRUE) {
+	if (io_mode.sensordata_to_file) {
 		if ((meas_counter%2==1) && (record))
 			fprintf(fp_datalog, "%.4f %.4f %f %u %u %u %u %u %u %u %u %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
 	}
