@@ -26,9 +26,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-int g_debug=0;
-FILE *fp_console=NULL;
-
 static int calibrate_ams5915(t_eeprom_data* data)
 {
 	t_ams5915 dynamic_sensor;

@@ -29,9 +29,6 @@
 #include <math.h>
 #include <ctype.h>
 
-extern int g_debug;
-extern FILE *fp_console;
-
 int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_ams5915 *dynamic_sensor, t_ads1110 *voltage_sensor, t_ds2482 *temp_sensor, t_config *config)
 {
 	char line[70];

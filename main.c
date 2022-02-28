@@ -32,6 +32,7 @@
 #include "24c16.h"
 #include "wait.h"
 #include "clock.h"
+#include "log.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -50,8 +51,6 @@
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include <syslog.h>
-
-int g_debug=0;
 
 // Sensor objects
 t_ms5611 static_sensor;
@@ -78,7 +77,6 @@ int tj=FALSE;
 t_io_mode io_mode;
 
 char config_filename[50];
-FILE *fp_console=NULL;
 FILE *fp_sensordata=NULL;
 FILE *fp_datalog=NULL;
 FILE *fp_config=NULL;

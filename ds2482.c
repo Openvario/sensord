@@ -18,7 +18,7 @@
 */
 
 #include "ds2482.h"
-#include "def.h"
+#include "log.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -30,9 +30,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-
-extern int g_debug;
-extern FILE *fp_console;
 
 //http://datasheets.maximintegrated.com/en/ds/DS2482-100.pdf
 //http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf

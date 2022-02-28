@@ -20,6 +20,7 @@
 #include "cmdline_parser.h"
 #include "version.h"
 #include "def.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,13 +28,11 @@
 #include <string.h>
 
 extern char config_filename[50];
-extern int g_debug;
 
 extern int g_foreground;
 extern int g_secordcomp;
 extern int tj;
 
-extern FILE *fp_console;
 extern FILE *fp_sensordata;
 extern FILE *fp_datalog;
 extern FILE *fp_config;

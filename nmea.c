@@ -18,13 +18,10 @@
 */
 
 #include "nmea.h"
-#include "def.h"
+#include "log.h"
 
 #include <stdio.h>
 #include <string.h>
-
-extern int g_debug;
-extern FILE *fp_console;
 
 /**
 * @brief Implements the $POV NMEA Sentence for pressure data

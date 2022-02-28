@@ -27,6 +27,7 @@
 #include "AirDensity.h"
 #include "24c16.h"
 #include "wait.h"
+#include "log.h"
 
 #include <termios.h>
 #include <stdio.h>
@@ -57,7 +58,6 @@ t_ds2482 temp_sensor;
 
 t_config config;
 t_io_mode io_mode;
-int g_debug=0;
 int sidx=0;
 int tidx=0;
 double statval[1048576][3];
@@ -72,7 +72,6 @@ int g_secordcomp=FALSE;
 int tj=FALSE;
 
 char config_filename[50];
-FILE *fp_console=NULL;
 FILE *fp_sensordata=NULL;
 FILE *fp_config=NULL;
 FILE *fp_datalog=NULL;

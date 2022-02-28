@@ -17,5 +17,12 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#define TRUE 1
-#define FALSE 0
+#pragma once
+
+#include <stdio.h>
+
+extern int g_debug;
+extern FILE *fp_console;
+
+#define debug_print(...) if(g_debug>0)fprintf(fp_console,__VA_ARGS__)
+#define ddebug_print(...) if(g_debug>1)fprintf(fp_console,__VA_ARGS__)

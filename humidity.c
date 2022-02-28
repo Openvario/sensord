@@ -1,4 +1,5 @@
 #include "humidity.h"
+#include "log.h"
 
 #include <stdio.h>
 #include <sys/ioctl.h>
@@ -9,9 +10,6 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-
-extern int g_debug;
-extern FILE *fp_console;
 
 #define I2C_DEVICE "/dev/i2c-1"
 

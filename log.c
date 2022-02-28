@@ -17,5 +17,8 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#define TRUE 1
-#define FALSE 0
+#include "log.h"
+
+int g_debug=0;
+
+FILE *fp_console=NULL;

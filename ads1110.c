@@ -18,7 +18,7 @@
 */
 
 #include "ads1110.h"
-#include "def.h"
+#include "log.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -30,9 +30,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-
-extern int g_debug;
-extern FILE *fp_console;
 
 int ads1110_open(t_ads1110 *sensor, unsigned char i2c_address)
 {

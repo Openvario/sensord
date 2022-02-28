@@ -18,7 +18,7 @@
 */
 
 #include "ams5915.h"
-#include "def.h"
+#include "log.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -31,9 +31,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-
-extern int g_debug;
-extern FILE *fp_console;
 
 /**
 * @brief Establish connection to AMS5915 pressure sensor

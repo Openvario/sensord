@@ -18,7 +18,7 @@
 */
 
 #include "ms5611.h"
-#include "def.h"
+#include "log.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -30,9 +30,6 @@
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
-
-extern int g_debug;
-extern FILE *fp_console;
 
 /**
 * @brief Establish connection to MS5611 pressure sensor
