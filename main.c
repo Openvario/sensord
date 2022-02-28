@@ -126,7 +126,7 @@ static int NMEA_message_handler(int sock)
 		// // NMEA sentence valid ?? Otherwise print some error !!
 		if (result != 1) fprintf(stderr, "POV Temperature NMEA Result = %d\n",result);
 		// Send NMEA string via socket to XCSoar send complete sentence including terminating '\0'
-		if ((sock_err = send(sock, s, strlen(s), 0)) < 0) fprintf(stderr, "send failed %s\n",s);
+		if ((sock_err = write(sock, s, strlen(s))) < 0) fprintf(stderr, "send failed %s\n",s);
 	}
 	if (temp_sensor.humidity_valid) {
 		// Compose POV NMEA sentences
@@ -135,7 +135,7 @@ static int NMEA_message_handler(int sock)
 		// NMEA sentence valid ?? Otherwise print some error !!
 		if (result != 1) fprintf(stderr, "POV Humidity NMEA Result = %d\n",result);
 		// Send NMEA string via socket to XCSoar send complete sentence including terminating '\0'
-		if ((sock_err = send(sock, s, strlen(s), 0)) < 0) fprintf(stderr, "send failed %s\n",s);
+		if ((sock_err = write(sock, s, strlen(s))) < 0) fprintf(stderr, "send failed %s\n",s);
 	}
 
 	if ((nmea_counter++)%4==0)
@@ -153,7 +153,7 @@ static int NMEA_message_handler(int sock)
 				fprintf(stderr, "POV slow NMEA Result = %d\n",result);
 			}
 			// Send NMEA string via socket to XCSoar
-			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+			if ((sock_err = write(sock, s, strlen(s))) < 0)
 			{
 			  fprintf(stderr, "send failed %s\n",s);
 				return sock_err;
@@ -174,7 +174,7 @@ static int NMEA_message_handler(int sock)
 				fprintf(stderr, "POV fast NMEA Result = %d\n",result);
 			}
 			// Send NMEA string via socket to XCSoar
-			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+			if ((sock_err = write(sock, s, strlen(s))) < 0)
 			{
 				fprintf(stderr, "send failed\n");
 				return sock_err;
@@ -193,7 +193,7 @@ static int NMEA_message_handler(int sock)
 				fprintf(stderr, "POV voltage NMEA Result = %d\n",result);
 			}
 			// Send NMEA string via socket to XCSoar
-			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
+			if ((sock_err = write(sock, s, strlen(s))) < 0)
 			{
 			  fprintf(stderr, "send failed %s\n",s);
 				return sock_err;
