@@ -53,24 +53,24 @@
 #include <syslog.h>
 
 // Sensor objects
-t_ms5611 static_sensor;
-t_ms5611 tep_sensor;
-t_ams5915 dynamic_sensor;
-t_ads1110 voltage_sensor;
-t_ds2482 temp_sensor;
+static t_ms5611 static_sensor;
+static t_ms5611 tep_sensor;
+static t_ams5915 dynamic_sensor;
+static t_ads1110 voltage_sensor;
+static t_ds2482 temp_sensor;
 
 
 // configuration object
-t_config config;
+static t_config config;
 
 // Filter objects
-t_kalmanfilter1d vkf;
+static t_kalmanfilter1d vkf;
 
 // pressures
-float p_static;
-float p_dynamic;
+static float p_static;
+static float p_dynamic;
 
-t_io_mode io_mode;
+static t_io_mode io_mode;
 
 /**
 * @brief Signal handler if sensord will be interrupted
@@ -82,7 +82,8 @@ t_io_mode io_mode;
 * @date 17.04.2014 born
 *
 */
-void sigintHandler(int sig_num){
+static void sigintHandler(int sig_num)
+{
 	(void)sig_num;
 
 	signal(SIGINT, sigintHandler);
@@ -111,7 +112,7 @@ void sigintHandler(int sig_num){
 * @date 17.04.2014 born
 *
 */
-int NMEA_message_handler(int sock)
+static int NMEA_message_handler(int sock)
 {
 	// some local variables
 	float vario;
@@ -225,7 +226,7 @@ int NMEA_message_handler(int sock)
 * Rarely, other glitches have been seen where the temperature and/or pressure reading on one sensor just drops a substantial amount.  As such, any reading that is more than 100,000
 * away from the previous reading is rejected.
 */
-void pressure_measurement_handler(void)
+static void pressure_measurement_handler(void)
 {
 	static int meas_counter = 1, glitch = 0;
 	int reject = 0;
@@ -398,7 +399,7 @@ void pressure_measurement_handler(void)
 	meas_counter++;
 }
 
-void temperature_measurement_handler(void)
+static void temperature_measurement_handler(void)
 {
 	static int done = 0, temp_counter = 0, rollover=0;
 

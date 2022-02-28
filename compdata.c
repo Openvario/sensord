@@ -49,23 +49,22 @@
 #include <syslog.h>
 
 // Sensor objects
-t_ms5611 static_sensor;
-t_ms5611 tep_sensor;
-t_ams5915 dynamic_sensor;
-t_ads1110 voltage_sensor;
-t_ds2482 temp_sensor;
+static t_ms5611 static_sensor;
+static t_ms5611 tep_sensor;
+static t_ams5915 dynamic_sensor;
+static t_ads1110 voltage_sensor;
+static t_ds2482 temp_sensor;
 
-
-t_config config;
-t_io_mode io_mode;
-int sidx=0;
-int tidx=0;
-double statval[1048576][3];
-double tepval[1048576][3];
-int glitch=0;
-int noglitch=0;
-int urun=0;
-int orun=0;
+static t_config config;
+static t_io_mode io_mode;
+static int sidx=0;
+static int tidx=0;
+static double statval[1048576][3];
+static double tepval[1048576][3];
+static int glitch=0;
+static int noglitch=0;
+static int urun=0;
+static int orun=0;
 
 /**
 * @brief Signal handler if sensord will be interrupted
