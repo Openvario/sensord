@@ -28,7 +28,6 @@
 
 extern char config_filename[50];
 extern int g_debug;
-extern int g_log;
 
 extern int g_foreground;
 extern int g_secordcomp;

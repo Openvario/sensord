@@ -52,7 +52,6 @@
 #include <syslog.h>
 
 int g_debug=0;
-int g_log=0;
 
 // Sensor objects
 t_ms5611 static_sensor;

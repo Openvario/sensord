@@ -58,14 +58,12 @@ t_ds2482 temp_sensor;
 t_config config;
 t_io_mode io_mode;
 int g_debug=0;
-int g_log=0;
 int sidx=0;
 int tidx=0;
 double statval[1048576][3];
 double tepval[1048576][3];
 int glitch=0;
 int noglitch=0;
-int idx=0;
 int urun=0;
 int orun=0;
 
