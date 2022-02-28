@@ -22,7 +22,6 @@
 #include <stdio.h>
 
 extern int g_debug;
-extern FILE *fp_console;
 
-#define debug_print(...) if(g_debug>0)fprintf(fp_console,__VA_ARGS__)
-#define ddebug_print(...) if(g_debug>1)fprintf(fp_console,__VA_ARGS__)
+#define debug_print(...) if(g_debug>0)fprintf(stderr,__VA_ARGS__)
+#define ddebug_print(...) if(g_debug>1)fprintf(stderr,__VA_ARGS__)

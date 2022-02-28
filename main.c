@@ -95,8 +95,7 @@ static void sigintHandler(int sig_num)
 	if (fp_sensordata != NULL)
 		fclose(fp_sensordata);
 
-	printf("Exiting ...\n");
-	fclose(fp_console);
+	fprintf(stderr, "Exiting ...\n");
 
 	exit(0);
 }
@@ -123,18 +122,18 @@ static int NMEA_message_handler(int sock)
 	if (temp_sensor.temp_valid) {
 		// Compose POV NMEA sentences
 		result=Compose_Temperature_POV(&s[0], temp_sensor.temperature);
-		// printf ("temp: %f\n",temp_sensor.temperature);
+		// fprintf(stderr, "temp: %f\n",temp_sensor.temperature);
 		// // NMEA sentence valid ?? Otherwise print some error !!
-		if (result != 1) printf("POV Temperature NMEA Result = %d\n",result);
+		if (result != 1) fprintf(stderr, "POV Temperature NMEA Result = %d\n",result);
 		// Send NMEA string via socket to XCSoar send complete sentence including terminating '\0'
 		if ((sock_err = send(sock, s, strlen(s), 0)) < 0) fprintf(stderr, "send failed %s\n",s);
 	}
 	if (temp_sensor.humidity_valid) {
 		// Compose POV NMEA sentences
 		result=Compose_Humidity_POV(&s[0], temp_sensor.humidity);
-		// printf ("humid: %f\n",temp_sensor.humidity);
+		// fprintf(stderr, "humid: %f\n",temp_sensor.humidity);
 		// NMEA sentence valid ?? Otherwise print some error !!
-		if (result != 1) printf("POV Humidity NMEA Result = %d\n",result);
+		if (result != 1) fprintf(stderr, "POV Humidity NMEA Result = %d\n",result);
 		// Send NMEA string via socket to XCSoar send complete sentence including terminating '\0'
 		if ((sock_err = send(sock, s, strlen(s), 0)) < 0) fprintf(stderr, "send failed %s\n",s);
 	}
@@ -151,7 +150,7 @@ static int NMEA_message_handler(int sock)
 			// NMEA sentence valid ?? Otherwise print some error !!
 			if (result != 1)
 			{
-				printf("POV slow NMEA Result = %d\n",result);
+				fprintf(stderr, "POV slow NMEA Result = %d\n",result);
 			}
 			// Send NMEA string via socket to XCSoar
 			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
@@ -172,7 +171,7 @@ static int NMEA_message_handler(int sock)
 			// NMEA sentence valid ?? Otherwise print some error !!
 			if (result != 1)
 			{
-				printf("POV fast NMEA Result = %d\n",result);
+				fprintf(stderr, "POV fast NMEA Result = %d\n",result);
 			}
 			// Send NMEA string via socket to XCSoar
 			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
@@ -191,7 +190,7 @@ static int NMEA_message_handler(int sock)
 			// NMEA sentence valid ?? Otherwise print some error !!
 			if (result != 1)
 			{
-				printf("POV voltage NMEA Result = %d\n",result);
+				fprintf(stderr, "POV voltage NMEA Result = %d\n",result);
 			}
 			// Send NMEA string via socket to XCSoar
 			if ((sock_err = send(sock, s, strlen(s), 0)) < 0)
@@ -353,8 +352,8 @@ static void pressure_measurement_handler(void)
 		// read from sensor data from file if desired
 		if (fscanf(fp_sensordata, "%f,%f,%f", &tep_sensor.p, &static_sensor.p, &dynamic_sensor.p) == EOF)
 		{
-			printf("End of File reached\n");
-			printf("Exiting ...\n");
+			fprintf(stderr, "End of File reached\n");
+			fprintf(stderr, "Exiting ...\n");
 			exit(EXIT_SUCCESS);
 		}
 	}
@@ -362,7 +361,7 @@ static void pressure_measurement_handler(void)
 	//
 	// of dynamic pressure
 	p_dynamic = (15*p_dynamic + dynamic_sensor.p) / 16;
-	//printf("Pdyn: %f\n",p_dynamic*100);
+	//fprintf(stderr, "Pdyn: %f\n",p_dynamic*100);
 	// mask speeds < 10km/h
 	if (p_dynamic < 0.04)
 	{
@@ -445,7 +444,7 @@ static void temperature_measurement_handler(void)
 				if (temp_counter==0) {
 					if ((temp_sensor.humidity_present) && (rollover)) {
 						si7021_read_humidity(&temp_sensor);
-						printf ("Humidity: %f\n",temp_sensor.humidity);
+						fprintf(stderr, "Humidity: %f\n",temp_sensor.humidity);
 					}
 					if (temp_sensor.temp_present) si7021_start_temp(&temp_sensor);
 					if (temp_sensor.temp_valid) temp_sensor.compensate=1; else temp_sensor.compensate=0;
@@ -453,7 +452,7 @@ static void temperature_measurement_handler(void)
 				if (temp_counter==temp_sensor.rollover/2) {
 					if (temp_sensor.temp_present) {
 						si7021_read_temp(&temp_sensor);
-						printf ("Temperature: %f\n",temp_sensor.temperature);
+						fprintf(stderr, "Temperature: %f\n",temp_sensor.temperature);
 					}
 					if (temp_sensor.humidity_present) si7021_start_humidity(&temp_sensor);
 				}
@@ -541,21 +540,13 @@ int main (int argc, char **argv) {
 		sigact.sa_flags = 0;
 		sigaction(SIGINT, &sigact, NULL);
 
-		// open console again, but as file_pointer
-		fp_console = stdout;
-		stderr = stdout;
-		setbuf(fp_console, NULL);
-		setbuf(stderr, NULL);
-
 		// close the standard file descriptors
 		close(STDIN_FILENO);
-		//close(STDOUT_FILENO);
-		close(STDERR_FILENO);
 	}
 	else
 	{
 		// implement handler for kill command
-		printf("Daemonizing ...\n");
+		fprintf(stderr, "Daemonizing ...\n");
 		pid = fork();
 
 		// something went wrong when forking
@@ -583,15 +574,19 @@ int main (int argc, char **argv) {
 
 		// close the standard file descriptors
 		close(STDIN_FILENO);
-		close(STDOUT_FILENO);
-		close(STDERR_FILENO);
 
 		//open file for log output
-		fp_console = fopen("sensord.log","w+");
-		stdout = fp_console;
-		stderr = fp_console;
-		setbuf(fp_console, NULL);
+		int log_fd = open("sensord.log", O_CREAT|O_WRONLY|O_TRUNC,
+				  0666);
+		if (log_fd >= 0) {
+			dup2(log_fd, STDOUT_FILENO);
+			dup2(log_fd, STDERR_FILENO);
+			close(log_fd);
+		}
 	}
+
+	setbuf(stdout, NULL);
+	setbuf(stderr, NULL);
 
 	// ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
@@ -601,13 +596,13 @@ int main (int argc, char **argv) {
 	result = eeprom_open(&eeprom, 0x50);
 	if (result != 0)
 	{
-		printf("No EEPROM found !!\n");
+		fprintf(stderr, "No EEPROM found !!\n");
 	}
 	else
 	{
 		if (eeprom_read_data(&eeprom, &data) == 0)
 		{
-			fprintf(fp_console,"Using EEPROM calibration values ...\n");
+			fprintf(stderr, "Using EEPROM calibration values ...\n");
 			dynamic_sensor.offset = data.zero_offset;
 		}
 		else
@@ -673,7 +668,7 @@ int main (int argc, char **argv) {
 		if (config.output_POV_T|config.output_POV_H) {
 			int autodetect=0,x=1;
 			switch (temp_sensor.sensor_type) {
-				case AUTO : printf ("Autodetecting temperature/humidity sensor\n");
+				case AUTO : fprintf(stderr, "Autodetecting temperature/humidity sensor\n");
 					    autodetect=1;
 					    // fallthrough
 				case DS18B20 :
@@ -684,7 +679,7 @@ int main (int argc, char **argv) {
 						if (OWConfigureBits(&temp_sensor)) {
 							temp_sensor.temp_present=config.output_POV_T;
 							temp_sensor.humidity_present=0;
-							printf ("DS18B20 temperature sensor present\n");
+							fprintf(stderr, "DS18B20 temperature sensor present\n");
 							temp_sensor.sensor_type=DS18B20;
 							autodetect=0;
 							if (temp_sensor.rollover==0) {
@@ -693,7 +688,7 @@ int main (int argc, char **argv) {
 							}
 						} else {
 							if (!autodetect) fprintf (stderr,"Open DS18B20 sensor failed!\n");
-							else printf ("DS18B20 temperature sensor not detected\n");
+							else fprintf(stderr, "DS18B20 temperature sensor not detected\n");
 							close (temp_sensor.fd);
 						}
 					}
@@ -702,10 +697,10 @@ int main (int argc, char **argv) {
 				case AM2321 :
 					if (am2321_open(&temp_sensor,0x5c)) {
 						if (!autodetect) fprintf (stderr,"Open AM2321 temperature/humidity Sensor failed !!\n"); else
-						printf ("AM2321 temperature/humidity sensor not detected\n");
+						fprintf(stderr, "AM2321 temperature/humidity sensor not detected\n");
 						close(temp_sensor.fd);
 					} else {
-						printf ("AM2321 temperature/humidity sensor present\n");
+						fprintf(stderr, "AM2321 temperature/humidity sensor present\n");
 						temp_sensor.humidity_present=config.output_POV_H;
 						temp_sensor.temp_present=config.output_POV_T;
 						temp_sensor.sensor_type=AM2321;
@@ -716,19 +711,19 @@ int main (int argc, char **argv) {
 					// fallthrough
 				case SHT4X : case SHT85 :
 					switch (sht4x_open(&temp_sensor,0x45)) {
-						case 0 : printf ("sensor present\n");
+						case 0 : fprintf(stderr, "sensor present\n");
 							 temp_sensor.humidity_present=config.output_POV_H;
 							 temp_sensor.temp_present=config.output_POV_T;
 							 if (temp_sensor.rollover==0) temp_sensor.rollover=80;
 							 autodetect=0;
 							 x=0;
 							 break;
-						case 3 : printf ("SHT4X sensor may be detected on 0x45, but not working\n");
+						case 3 : fprintf(stderr, "SHT4X sensor may be detected on 0x45, but not working\n");
 							 fprintf (stderr,"SHT4X sensor may be detected on 0x45, but not working\n");
 							 close(temp_sensor.fd);
 							 break;
 						case 4 : if ((temp_sensor.sensor_type)==SHT4X) {
-								 printf ("SHT4X sensor detected on 0x45, but failed to read serial number\n");
+								 fprintf(stderr, "SHT4X sensor detected on 0x45, but failed to read serial number\n");
 								 fprintf (stderr,"SHT4X sensor detected on 0x45, but failed to read serial nunber\n");
 							 }
 							 temp_sensor.humidity_present=config.output_POV_H;
@@ -742,22 +737,22 @@ int main (int argc, char **argv) {
 					}
 					if (x)
 						switch (sht4x_open(&temp_sensor,0x44)) {
-							case 0 : printf ("sensor present\n");
+							case 0 : fprintf(stderr, "sensor present\n");
 								temp_sensor.humidity_present=config.output_POV_H;
 								 temp_sensor.temp_present=config.output_POV_T;
 								 if (temp_sensor.rollover==0) temp_sensor.rollover=80;
 								 autodetect=0;
 								 x=0;
 							break;
-							case 3 : printf ("SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
+							case 3 : fprintf(stderr, "SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
 								 fprintf (stderr,"SHT4X/SHT85 sensor may be detected on 0x44, but not working\n");
 								 close(temp_sensor.fd);
 								 break;
 							case 4 : if ((temp_sensor.sensor_type)==SHT4X) {
-									printf ("SHT4X sensor detected on 0x44, but failed to read serial number\n");
+									fprintf(stderr, "SHT4X sensor detected on 0x44, but failed to read serial number\n");
 									fprintf (stderr,"SHT4X sensor detected on 0x44, but failed to read serial nunber\n");
 								 } else {
-									printf ("SHT85 sensor detected, but failed to read serial number\n");
+									fprintf(stderr, "SHT85 sensor detected, but failed to read serial number\n");
 									fprintf (stderr,"SHT85 sensor detected, but failed to read serial number\n");
 								 }
 								 temp_sensor.humidity_present=config.output_POV_H;
@@ -766,7 +761,7 @@ int main (int argc, char **argv) {
 								 autodetect=0;
 								 break;
 							default : if (!autodetect) fprintf (stderr,"Open SHT4X/SHT85 temperature/humidity sensor failed !!\n"); else
-									  printf ("SHT4X/SHT85 tenperature/humidity sensor not detected\n");
+									  fprintf(stderr, "SHT4X/SHT85 tenperature/humidity sensor not detected\n");
 								close(temp_sensor.fd);
 						}
 					if (!autodetect) break;
@@ -774,7 +769,7 @@ int main (int argc, char **argv) {
 				case SI7021 : case HTU21D : case HTU31D :
 					if ((temp_sensor.sensor_type!=HTU21D) && (temp_sensor.sensor_type!=SI7021)) {
 						switch (si7021_open(&temp_sensor,0x41)) {
-							case 0 : printf ("sensor present on 0x41\n");
+							case 0 : fprintf(stderr, "sensor present on 0x41\n");
 								temp_sensor.humidity_present=config.output_POV_H;
 								temp_sensor.temp_present=config.output_POV_T;
 								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
@@ -782,10 +777,10 @@ int main (int argc, char **argv) {
 								x=0;
 								break;
 							case 3 : fprintf (stderr,"HTU31D may be detected on 0x41, but not working\n");
-								printf ("HTU31D sensor may be detected on 0x41, but not working\n");
+								fprintf(stderr, "HTU31D sensor may be detected on 0x41, but not working\n");
 								close(temp_sensor.fd);
 								break;
-							case 4 : printf ("HTU31D sensor detected on 0x41, but failed to read serial number\n");
+							case 4 : fprintf(stderr, "HTU31D sensor detected on 0x41, but failed to read serial number\n");
 								 fprintf (stderr,"HTU31D sensor detected on 0x41, but failed to read serial number\n");
 								temp_sensor.humidity_present=config.output_POV_H;
 								temp_sensor.temp_present=config.output_POV_T;
@@ -799,7 +794,7 @@ int main (int argc, char **argv) {
 					}
 					if (x)
 						switch (si7021_open(&temp_sensor,0x40)) {
-							case 0 : printf ("sensor present on 0x40\n");
+							case 0 : fprintf(stderr, "sensor present on 0x40\n");
 								 temp_sensor.humidity_present=config.output_POV_H;
 								 temp_sensor.temp_present=config.output_POV_T;
 								 if (temp_sensor.rollover==0) {
@@ -807,25 +802,25 @@ int main (int argc, char **argv) {
 								 }
 								 autodetect=0;
 								 break;
-							case 3 : printf ("HTU31D sensor may be detected on 0x40, but not working\n");
+							case 3 : fprintf(stderr, "HTU31D sensor may be detected on 0x40, but not working\n");
 								 fprintf (stderr,"HTU31D sensor may be detected on 0x40, but not working\n");
 								 close(temp_sensor.fd);
 								 break;
-							case 4 : printf ("HTU31D sensor detected on 0x40, but failed to read serial number\n");
+							case 4 : fprintf(stderr, "HTU31D sensor detected on 0x40, but failed to read serial number\n");
 								 fprintf (stderr,"HTU31D sensor detected on 0x40, but failed to read serial number\n");
 								temp_sensor.humidity_present=config.output_POV_H;
 								temp_sensor.temp_present=config.output_POV_T;
 								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
 								autodetect=0;
 								break;
-							case 6 : printf ("SI7021/HTU21D detected but failed to read serial number\n");
+							case 6 : fprintf(stderr, "SI7021/HTU21D detected but failed to read serial number\n");
 								fprintf (stderr, "SI7021/HTU21D detected but failed to read serial number\n");
 								temp_sensor.humidity_present=config.output_POV_H;
 								temp_sensor.temp_present=config.output_POV_T;
 								if (temp_sensor.rollover==0) temp_sensor.rollover=80;
 								autodetect=0;
 								break;
-							case 7 : printf ("failed to read firmware revision\n");
+							case 7 : fprintf(stderr, "failed to read firmware revision\n");
 								fprintf (stderr, "SI7021 detected but failed to read firmware revision\n");
 								temp_sensor.humidity_present=config.output_POV_H;
 								temp_sensor.temp_present=config.output_POV_T;
@@ -834,7 +829,7 @@ int main (int argc, char **argv) {
 								break;
 							case 2 : case 5 : default :
 								if (!autodetect) fprintf (stderr,"Open SI7021/HTU21D/HTU31D temperature/humidity sensor failed !!\n"); else
-								printf ("SI7021/HTU21D/HTU31D tenperature/humidity sensor not detected\n");
+								fprintf(stderr, "SI7021/HTU21D/HTU31D tenperature/humidity sensor not detected\n");
 								close(temp_sensor.fd);
 						}
 					if (!autodetect) break;
@@ -843,7 +838,7 @@ int main (int argc, char **argv) {
 					config.output_POV_T=config.output_POV_H=0;
 					break;
 			}
-			if (autodetect) printf ("No temperature/humidity sensor detected !!\n");
+			if (autodetect) fprintf(stderr, "No temperature/humidity sensor detected !!\n");
 		}
 		//initialize differential pressure sensor
 		ams5915_init(&dynamic_sensor);
@@ -948,21 +943,21 @@ int main (int argc, char **argv) {
 void print_runtime_config(void)
 {
 	// print actual used config
-	fprintf(fp_console,"=========================================================================\n");
-	fprintf(fp_console,"Runtime Configuration:\n");
-	fprintf(fp_console,"----------------------\n");
-	fprintf(fp_console,"Vario:\n");
-	fprintf(fp_console,"  Kalman Accel:\t%f\n",config.vario_x_accel);
-	fprintf(fp_console,"Sensor TEK:\n");
-	fprintf(fp_console,"  Offset: \t%f\n",tep_sensor.offset);
-	fprintf(fp_console,"  Linearity: \t%f\n", tep_sensor.linearity);
-	fprintf(fp_console,"Sensor STATIC:\n");
-	fprintf(fp_console,"  Offset: \t%f\n",static_sensor.offset);
-	fprintf(fp_console,"  Linearity: \t%f\n", static_sensor.linearity);
-	fprintf(fp_console,"Sensor TOTAL:\n");
-	fprintf(fp_console,"  Offset: \t%f\n",dynamic_sensor.offset);
-	fprintf(fp_console,"  Linearity: \t%f\n", dynamic_sensor.linearity);
-	fprintf(fp_console,"=========================================================================\n");
+	fprintf(stderr, "=========================================================================\n");
+	fprintf(stderr, "Runtime Configuration:\n");
+	fprintf(stderr, "----------------------\n");
+	fprintf(stderr, "Vario:\n");
+	fprintf(stderr, "  Kalman Accel:\t%f\n",config.vario_x_accel);
+	fprintf(stderr, "Sensor TEK:\n");
+	fprintf(stderr, "  Offset: \t%f\n",tep_sensor.offset);
+	fprintf(stderr, "  Linearity: \t%f\n", tep_sensor.linearity);
+	fprintf(stderr, "Sensor STATIC:\n");
+	fprintf(stderr, "  Offset: \t%f\n",static_sensor.offset);
+	fprintf(stderr, "  Linearity: \t%f\n", static_sensor.linearity);
+	fprintf(stderr, "Sensor TOTAL:\n");
+	fprintf(stderr, "  Offset: \t%f\n",dynamic_sensor.offset);
+	fprintf(stderr, "  Linearity: \t%f\n", dynamic_sensor.linearity);
+	fprintf(stderr, "=========================================================================\n");
 
 }
 

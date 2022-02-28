@@ -57,7 +57,7 @@ int ds2482_open(t_ds2482 *sensor, unsigned char i2c_address)
 		return 0;
 	}
 
-	if (g_debug > 0) printf("Opened DS2482 on 0x%x\n", i2c_address);
+	if (g_debug > 0) fprintf(stderr, "Opened DS2482 on 0x%x\n", i2c_address);
 	//assign file handle to sensor object
 	sensor->fd = fd;
 	sensor->address = i2c_address;

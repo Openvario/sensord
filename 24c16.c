@@ -25,7 +25,7 @@ int update_checksum(t_eeprom_data* data)
 		p_data++;
 	}
 
-	//printf("Checksum: %x\n", checksum);
+	//fprintf(stderr, "Checksum: %x\n", checksum);
 	data->checksum = checksum;
 	return (0);
 }
@@ -39,8 +39,8 @@ int eeprom_read_data(t_24c16 *eeprom, t_eeprom_data *data)
 	// verify checksum
 	if (!verify_checksum(data))
 	{
-		printf("EEPROM content not valid !!\n");
-		printf("Please use -i to initialize EEPROM !!\n");
+		fprintf(stderr, "EEPROM content not valid !!\n");
+		fprintf(stderr, "Please use -i to initialize EEPROM !!\n");
 		return 2;
 	}
 	else
@@ -61,8 +61,8 @@ char verify_checksum(t_eeprom_data* data)
 		checksum += *p_data;
 		p_data++;
 	}
-	//printf("Checksum read: %x\n", data->checksum);
-	//printf("Checksum calc: %x\n", checksum);
+	//fprintf(stderr, "Checksum read: %x\n", data->checksum);
+	//fprintf(stderr, "Checksum calc: %x\n", checksum);
 	if (checksum == data->checksum)
 	{
 		return (1);
@@ -100,7 +100,7 @@ int eeprom_open(t_24c16 *eeprom, unsigned char i2c_address)
 
 	//write address offset to eeprom
 	if ((write(eeprom->fd, (void*)&offset, 1)) != 1) {				// Send register we want to read from
-		//printf("Error writing to i2c slave (%s)\n", __func__);
+		//fprintf(stderr, "Error writing to i2c slave (%s)\n", __func__);
 		ret_code = 1;
 	}
 
@@ -110,12 +110,12 @@ int eeprom_open(t_24c16 *eeprom, unsigned char i2c_address)
 
 	if (ret_code == 0)
 	{
-		printf("Opened 24C16 on 0x%x\n", i2c_address);
+		fprintf(stderr, "Opened 24C16 on 0x%x\n", i2c_address);
 
 	}
 	else
 	{
-		printf("Opened 24C16 on 0x%x failed !!!\n", i2c_address);
+		fprintf(stderr, "Opened 24C16 on 0x%x failed !!!\n", i2c_address);
 	}
 	return (ret_code);
 }
@@ -135,10 +135,10 @@ char eeprom_write(t_24c16 *eeprom, char *s, unsigned char offset, unsigned char 
 	{
 		// copy data to write buffer
 		buf[1]=*(s);
-		//printf("buf[1]: '%c'\n",buf[1]);
+		//fprintf(stderr, "buf[1]: '%c'\n",buf[1]);
 		// Write data to EEPROM
 		if ((write(eeprom->fd, &buf[0], 2)) != 2) {				// Send register we want to read from
-			printf("Error writing to i2c slave (%s)\n", __func__);
+			fprintf(stderr, "Error writing to i2c slave (%s)\n", __func__);
 			return(1);
 		}
 
@@ -154,12 +154,12 @@ char eeprom_read(t_24c16 *eeprom, char *s, char offset, char count)
 {
 	//write address offset to eeprom
 	if ((write(eeprom->fd, &offset, 1)) != 1) {				// Send register we want to read from
-		printf("Error writing to i2c slave (%s)\n", __func__);
+		fprintf(stderr, "Error writing to i2c slave (%s)\n", __func__);
 		return(1);
 	}
 
 	if (read(eeprom->fd, s, count) != count) {		// Read back data into buf[]
-		printf("Unable to read from slave\n");
+		fprintf(stderr, "Unable to read from slave\n");
 		return(1);
 	}
 

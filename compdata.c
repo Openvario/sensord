@@ -85,8 +85,7 @@ static void sigintHandler(int sig_num)
 	if (fp_sensordata != NULL)
 		fclose(fp_sensordata);
 
-	printf("Exiting ...\n");
-	fclose(fp_console);
+	fprintf(stderr, "Exiting ...\n");
 
 	exit(0);
 }
@@ -300,14 +299,8 @@ int main (int argc, char **argv) {
 	sigaction(SIGINT, &sigact, NULL);
 
 	// open console again, but as file_pointer
-	fp_console = stdout;
-	stderr = stdout;
-	setbuf(fp_console, NULL);
 	setbuf(stderr, NULL);
 
-	// close the standard file descriptors
-	//close(STDOUT_FILENO);
-	close(STDERR_FILENO);
 	// ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
 	// we need hardware sensors for running !!
