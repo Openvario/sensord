@@ -122,10 +122,6 @@ void sigintHandler(int sig_num){
 	if (fp_sensordata != NULL)
 		fclose(fp_sensordata);
 
-	//close fp_config if used
-	if (fp_config != NULL)
-		fclose(fp_config);
-
 	//fclose(fp_rawlog);
 	printf("Exiting ...\n");
 	fclose(fp_console);
@@ -561,8 +557,10 @@ int main (int argc, char **argv) {
 	cmdline_parser(argc, argv, &io_mode);
 
 	// get config file options
-	if (fp_config != NULL)
+	if (fp_config != NULL) {
 		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &temp_sensor, &config);
+		fclose(fp_config);
+	}
 
 	// check if we are a daemon or stay in foreground
 	if (g_foreground == TRUE)
