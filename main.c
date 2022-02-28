@@ -539,9 +539,6 @@ int main (int argc, char **argv) {
 		sigemptyset (&sigact.sa_mask);
 		sigact.sa_flags = 0;
 		sigaction(SIGINT, &sigact, NULL);
-
-		// close the standard file descriptors
-		close(STDIN_FILENO);
 	}
 	else
 	{
@@ -573,7 +570,11 @@ int main (int argc, char **argv) {
 		}
 
 		// close the standard file descriptors
-		close(STDIN_FILENO);
+		int null_fd = open("/dev/null", O_RDONLY);
+		if (null_fd >= 0) {
+			dup2(null_fd, STDIN_FILENO);
+			close(null_fd);
+		}
 
 		//open file for log output
 		int log_fd = open("sensord.log", O_CREAT|O_WRONLY|O_TRUNC,
