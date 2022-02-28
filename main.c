@@ -35,7 +35,6 @@
 #include <syslog.h>
 //#include "version.h"
 #include "nmea.h"
-//#include "w1.h"
 #include "def.h"
 #include "KalmanFilter1d.h"
 #include "cmdline_parser.h"

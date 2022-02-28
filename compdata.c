@@ -35,7 +35,6 @@
 #include <arpa/inet.h>
 #include <syslog.h>
 //#include "version.h"
-//#include "w1.h"
 #include "def.h"
 
 #include "ds2482.h"

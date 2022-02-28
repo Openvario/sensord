@@ -2,9 +2,9 @@
 #Some compiler stuff and flags
 CFLAGS += -g -Wall -Wextra
 EXECUTABLE = sensord sensorcal compdata
-_OBJ = wait.o ms5611.o ams5915.o ads1110.o main.o nmea.o timer.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o vario.o AirDensity.o 24c16.o ds2482.o humidity.o
+_OBJ = wait.o ms5611.o ams5915.o ads1110.o main.o nmea.o KalmanFilter1d.o cmdline_parser.o configfile_parser.o vario.o AirDensity.o 24c16.o ds2482.o humidity.o
 _OBJ_CAL = wait.o 24c16.o ams5915.o sensorcal.o
-_OBJ_COMPDATA = wait.o ms5611.o compdata.o timer.o cmdline_parser.o configfile_parser.o ds2482.o
+_OBJ_COMPDATA = wait.o ms5611.o compdata.o cmdline_parser.o configfile_parser.o ds2482.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 OBJ_CAL = $(patsubst %,$(ODIR)/%,$(_OBJ_CAL))
 OBJ_COMPDATA = $(patsubst %,$(ODIR)/%,$(_OBJ_COMPDATA))
