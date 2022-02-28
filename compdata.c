@@ -67,17 +67,6 @@ int noglitch=0;
 int urun=0;
 int orun=0;
 
-int g_foreground=FALSE;
-int g_secordcomp=FALSE;
-int tj=FALSE;
-
-char config_filename[50];
-FILE *fp_sensordata=NULL;
-FILE *fp_config=NULL;
-FILE *fp_datalog=NULL;
-//FILE *fp1=NULL;
-//FILE *fp2=NULL;
-
 /**
 * @brief Signal handler if sensord will be interrupted
 * @param sig_num

@@ -23,19 +23,18 @@
 #include "log.h"
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 
-extern char config_filename[50];
+char config_filename[50];
 
-extern int g_foreground;
-extern int g_secordcomp;
-extern int tj;
+int g_foreground=FALSE;
+int g_secordcomp=FALSE;
+int tj=FALSE;
 
-extern FILE *fp_sensordata;
-extern FILE *fp_datalog;
-extern FILE *fp_config;
+FILE *fp_sensordata=NULL;
+FILE *fp_datalog=NULL;
+FILE *fp_config=NULL;
 
 void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 

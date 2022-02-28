@@ -70,16 +70,7 @@ t_kalmanfilter1d vkf;
 float p_static;
 float p_dynamic;
 
-int g_foreground=FALSE;
-int g_secordcomp=FALSE;
-int tj=FALSE;
-
 t_io_mode io_mode;
-
-char config_filename[50];
-FILE *fp_sensordata=NULL;
-FILE *fp_datalog=NULL;
-FILE *fp_config=NULL;
 
 /**
 * @brief Signal handler if sensord will be interrupted
