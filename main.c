@@ -476,10 +476,31 @@ static void temperature_measurement_handler(void)
 	}
 }
 
+static void handle_connection(int sock)
+{
+	int sock_err = 0;
+	int j = 0;
+
+	tep_sensor.D2f=tep_sensor.D2;
+	static_sensor.D2f=static_sensor.D2;
+
+	// main data acquisition loop
+	while(sock_err >= 0)
+	{
+		if (tj)
+			if ((++j)%1023==100) sensor_wait(250e3);
+		pressure_measurement_handler();
+		temperature_measurement_handler();
+		sock_err = NMEA_message_handler(sock);
+		//debug_print("Sock_err: %d\n",sock_err);
+
+	}
+}
+
 int main (int argc, char **argv) {
 
 	// local variables
-	int i = 0, j = 0;
+	int i = 0;
 	int result;
 
 	t_24c16 eeprom;
@@ -904,7 +925,6 @@ int main (int argc, char **argv) {
 		// socket communication
 		int sock;
 		struct sockaddr_in server;
-		int sock_err = 0;
 
 		// Open Socket for TCP/IP communication
 		sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -920,20 +940,9 @@ int main (int argc, char **argv) {
 			fflush(stdout);
 			sleep(1);
 		}
-		tep_sensor.D2f=tep_sensor.D2;
-		static_sensor.D2f=static_sensor.D2;
-		// socket connected
-		// main data acquisition loop
-		while(sock_err >= 0)
-		{
-			if (tj)
-				if ((++j)%1023==100) sensor_wait(250e3);
-			pressure_measurement_handler();
-			temperature_measurement_handler();
-			sock_err = NMEA_message_handler(sock);
-			//debug_print("Sock_err: %d\n",sock_err);
 
-		}
+		// socket connected
+		handle_connection(sock);
 
 		// connection dropped
 		close(sock);
