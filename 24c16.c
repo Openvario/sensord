@@ -25,7 +25,7 @@ int update_checksum(t_eeprom_data* data)
 		p_data++;
 	}
 
-	//printf("Checksum: %x\n", checksum);
+	printf("Checksum: %x\n", checksum);
 	data->checksum = checksum;
 	return (0);
 }
@@ -61,8 +61,8 @@ char verify_checksum(t_eeprom_data* data)
 		checksum += *p_data;
 		p_data++;
 	}
-	//printf("Checksum read: %x\n", data->checksum);
-	//printf("Checksum calc: %x\n", checksum);
+	printf("Checksum read: %x\n", data->checksum);
+	printf("Checksum calc: %x\n", checksum);
 	if (checksum == data->checksum)
 	{
 		return (1);
