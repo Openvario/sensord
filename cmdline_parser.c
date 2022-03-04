@@ -17,27 +17,24 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "main.h"
+#include "cmdline_parser.h"
 #include "version.h"
+#include "log.h"
+
 #include <stdlib.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-#include "def.h"
 
+char config_filename[50];
 
-extern char config_filename[50];
-extern int g_debug;
-extern int g_log;
+bool g_foreground = false;
+bool g_inetd = false;
+bool g_secordcomp = false;
+bool tj = false;
 
-extern int g_foreground;
-extern int g_secordcomp;
-extern int tj;
-
-extern FILE *fp_console;
-extern FILE *fp_sensordata;
-extern FILE *fp_datalog;
-extern FILE *fp_config;
+FILE *fp_sensordata=NULL;
+FILE *fp_datalog=NULL;
+FILE *fp_config=NULL;
 
 void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 
@@ -49,6 +46,7 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 	const char* Usage = "\n"\
 	"  -v              print version information\n"\
 	"  -f              don't daemonize, stay in foreground\n"\
+	"  -i              inetd mode\n"\
 	"  -c [filename]   use config file [filename]\n"\
 	"  -d[n]           set debug level. n can be [1..2]. default=1\n"\
    	"  -j              turn on timing jitter... for testing only!\n"\
@@ -58,7 +56,7 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 	"\n";
 
 	// check commandline arguments
-	while ((c = getopt (argc, argv, "vd::fjlhr:p:c:s")) != -1)
+	while ((c = getopt (argc, argv, "vd::fijlhr:p:c:s")) != -1)
 	{
 		switch (c) {
 			case 'v':
@@ -74,14 +72,14 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 				// record sensordata for replay
 				if (optarg == NULL)
 				{
-					printf("Missing option for -c\n");
-					printf("Exiting ...\n");
+					fprintf(stderr, "Missing option for -c\n");
+					fprintf(stderr, "Exiting ...\n");
 					exit(EXIT_FAILURE);
 				}
 				else
 				{
 					strcpy(config_filename, optarg);
-					printf("!! Using config file %s !!\n", config_filename);
+					fprintf(stderr, "!! Using config file %s !!\n", config_filename);
 
 					// Open the fp to config file
 					fp_config = fopen(config_filename,"r");
@@ -89,8 +87,8 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 					//check if config file opened ok ...
 					if( fp_config == NULL)
 					{
-						printf("Error opening config file: %s\n", config_filename);
-						printf("Exiting ...\n");
+						fprintf(stderr, "Error opening config file: %s\n", config_filename);
+						fprintf(stderr, "Exiting ...\n");
 						exit(EXIT_FAILURE);
 					}
 				}
@@ -104,39 +102,45 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 				else
 					g_debug = atoi(optarg);
 
-				printf("!! DEBUG LEVEL %d !!\n",g_debug);
+				fprintf(stderr, "!! DEBUG LEVEL %d !!\n",g_debug);
 				break;
 
 			case 'f':
 				// don't daemonize
-				printf("!! STAY in g_foreground !!\n");
-				g_foreground = TRUE;
+				fprintf(stderr, "!! STAY in g_foreground !!\n");
+				g_foreground = true;
+				break;
+
+			case 'i':
+				// inetd mode
+				g_foreground = true;
+				g_inetd = true;
 				break;
 
 			case 'j':
 				// Cause deliberate timing jitter
-				printf("!! Timing jitter on !!\n");
-				tj = TRUE;
+				fprintf(stderr, "!! Timing jitter on !!\n");
+				tj = true;
 				break;
 
 			case 's':
 				// enable second order compensation
-				printf("Second order compensation ENABLE\n");
-				g_secordcomp = TRUE;
+				fprintf(stderr, "Second order compensation ENABLE\n");
+				g_secordcomp = true;
 				break;
 
 			case 'r':
 				// record sensordata for replay
 				if (optarg == NULL)
 				{
-					printf("Missing option for -r\n");
-					printf("Exiting ...\n");
+					fprintf(stderr, "Missing option for -r\n");
+					fprintf(stderr, "Exiting ...\n");
 					exit(EXIT_FAILURE);
 				}
 
-				io_mode->sensordata_to_file = TRUE;
+				io_mode->sensordata_to_file = true;
 				strcpy(datalog_filename, optarg);
-				printf("!! RECORD DATA TO %s !!\n", datalog_filename);
+				fprintf(stderr, "!! RECORD DATA TO %s !!\n", datalog_filename);
 
 				// Open the fp to record file
 				fp_datalog = fopen(datalog_filename,"w+");
@@ -146,28 +150,28 @@ void cmdline_parser(int argc, char **argv, t_io_mode *io_mode){
 				// replay sensordata instead of measuring
 				if (optarg == NULL)
 				{
-					printf("Missing option for -p\n");
-					printf("Exiting ...\n");
+					fprintf(stderr, "Missing option for -p\n");
+					fprintf(stderr, "Exiting ...\n");
 					exit(EXIT_FAILURE);
 				}
 
-				io_mode->sensordata_from_file = TRUE;
+				io_mode->sensordata_from_file = true;
 				strcpy(sensordata_filename, optarg);
-				printf("!! REPLAY DATA FROM %s !!\n", sensordata_filename);
+				fprintf(stderr, "!! REPLAY DATA FROM %s !!\n", sensordata_filename);
 				// Open the fp to replay file
 				fp_sensordata = fopen(sensordata_filename,"r");
 				if (fp_sensordata == NULL)
 				{
-					printf("Error opening file %s for replay !!\n", sensordata_filename);
-					printf("Exiting ...\n");
+					fprintf(stderr, "Error opening file %s for replay !!\n", sensordata_filename);
+					fprintf(stderr, "Exiting ...\n");
 					exit(EXIT_FAILURE);
 				}
 				break;
 
 			case '?':
-				printf("Unknown option %c\n", optopt);
-				printf("Usage: sensord [OPTION]\n%s",Usage);
-				printf("Exiting ...\n");
+				fprintf(stderr, "Unknown option %c\n", optopt);
+				fprintf(stderr, "Usage: sensord [OPTION]\n%s",Usage);
+				fprintf(stderr, "Exiting ...\n");
 				exit(EXIT_FAILURE);
 				break;
 		}

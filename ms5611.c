@@ -18,6 +18,7 @@
 */
 
 #include "ms5611.h"
+#include "log.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -29,10 +30,6 @@
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
-#include "def.h"
-
-extern int g_debug;
-extern FILE *fp_console;
 
 /**
 * @brief Establish connection to MS5611 pressure sensor
@@ -61,7 +58,7 @@ int ms5611_open(t_ms5611 *sensor, unsigned char i2c_address)
 		return 1;
 	}
 
-	if (g_debug > 0) printf("Opened MS5611 on 0x%x\n", i2c_address);
+	if (g_debug > 0) fprintf(stderr, "Opened MS5611 on 0x%x\n", i2c_address);
 
 	// assign file handle to sensor object
 	sensor->fd = fd;
@@ -133,12 +130,12 @@ int ms5611_init(t_ms5611 *sensor)
 		// get calibration values
 		buf[0] = a;													// This is the register we want to read from
 		if ((write(sensor->fd, buf, 1)) != 1) {								// Send register we want to read from
-			printf("Error writing to i2c slave (write cal reg)\n");
+			fprintf(stderr, "Error writing to i2c slave (write cal reg)\n");
 			return(1);
 		}
 		usleep(10000);
 		if (read(sensor->fd, buf, 2) != 2) {								// Read back data into buf[]
-			printf("Unable to read from slave (get cal reg)\n");
+			fprintf(stderr, "Unable to read from slave (get cal reg)\n");
 			return(1);
 		}
 		ddebug_print("Read adr: 0x%x data: 0x%x 0x%x\n", a, buf[0], buf[1]);
@@ -197,14 +194,14 @@ int ms5611_reset(t_ms5611 *sensor)
 	// clock out sensor
 	//buf[0] = 0x00;										// This is the register we want to read from
 	//if ((write(sensor->fd, buf, 1)) != 1) {				// Send register we want to read from
-//		printf("Error writing to i2c slave (%s)\n", __func__);
+//		fprintf(stderr, "Error writing to i2c slave (%s)\n", __func__);
 	//	return(1);
 	//}
 
 	// reset sensor
 	buf[0] = 0x1E;										// This is the register we want to read from
 	if ((write(sensor->fd, buf, 1)) != 1) {				// Send register we want to read from
-		printf("Error writing to i2c slave (%s)\n", __func__);
+		fprintf(stderr, "Error writing to i2c slave (%s)\n", __func__);
 		return(1);
 	}
 
@@ -227,7 +224,7 @@ int ms5611_start_temp(t_ms5611 *sensor)
 	// start conversion for D2
 	buf[0] = 0x58;										// This is the register we want to read from
 	if ((write(sensor->fd, buf, 1)) != 1) {				// Send register we want to read from
-		printf("Error writing to i2c slave (%s)\n", __func__);
+		fprintf(stderr, "Error writing to i2c slave (%s)\n", __func__);
 		return(1);
 	}
 
@@ -251,7 +248,7 @@ int ms5611_start_pressure(t_ms5611 *sensor)
 	// start conversion for D1
 	buf[0] = 0x48;													// This is the register we want to read from
 	if ((write(sensor->fd, buf, 1)) != 1) {								// Send register we want to read from
-		printf("Error writing to i2c slave: start conv: adr %x\n",sensor->address);
+		fprintf(stderr, "Error writing to i2c slave: start conv: adr %x\n",sensor->address);
 		return(1);
 	}
 
@@ -279,12 +276,12 @@ int ms5611_read_temp(t_ms5611 *sensor, int glitch)
 	// read result
 	buf[0] = 0x00;
 	if ((write(sensor->fd, buf, 1)) != 1) {								// Send register we want to read from
-		printf("Error writing to i2c slave(%s)\n", __func__);
+		fprintf(stderr, "Error writing to i2c slave(%s)\n", __func__);
 		return(1);
 	}
 
 	if (read(sensor->fd, buf, 3) != 3) {								// Read back data into buf[]
-		printf("Unable to read from slave(%s)\n", __func__);
+		fprintf(stderr, "Unable to read from slave(%s)\n", __func__);
 		return(1);
 	}
 
@@ -356,12 +353,12 @@ int ms5611_read_pressure(t_ms5611 *sensor)
 	// read result
 	buf[0] = 0x00;
 	if ((write(sensor->fd, buf, 1)) != 1) {								// Send register we want to read from
-		printf("Error writing to i2c slave: write Read result(%s)\n", __func__);
+		fprintf(stderr, "Error writing to i2c slave: write Read result(%s)\n", __func__);
 		return(1);
 	}
 
 	if (read(sensor->fd, buf, 3) != 3) {								// Read back data into buf[]
-		printf("Unable to read from slave: read result(%s)\n", __func__);
+		fprintf(stderr, "Unable to read from slave: read result(%s)\n", __func__);
 		return(1);
 	}
 

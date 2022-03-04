@@ -17,22 +17,17 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "configfile_parser.h"
+#include "ds2482.h"
+#include "ms5611.h"
+#include "ams5915.h"
+#include "ads1110.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
-
-#include "def.h"
-
-#include "ds2482.h"
-#include "ms5611.h"
-#include "ams5915.h"
-#include "ads1110.h"
-#include "configfile_parser.h"
-
-extern int g_debug;
-extern FILE *fp_console;
 
 int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_ams5915 *dynamic_sensor, t_ads1110 *voltage_sensor, t_ds2482 *temp_sensor, t_config *config)
 {
@@ -48,7 +43,7 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 		{
 			// get line from config file
 			if (fgets(line, 70, fp)!=NULL) {
-				//printf("getting line: '%69s'\n", line);
+				//fprintf(stderr, "getting line: '%69s'\n", line);
 
 				// check if line is comment
 				if((!(line[0] == '#')) && (!(line[0] == '\n')))
@@ -61,35 +56,35 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 					if (strcmp(tmp,"output_POV_E") == 0)
 					{
 						config->output_POV_E = 1;
-						//printf("OUTput POV_E enabled !! \n");
+						//fprintf(stderr, "OUTput POV_E enabled !! \n");
 					}
 
 					// check for output of POV_P_Q sentence
 					if (strcmp(tmp,"output_POV_P_Q") == 0)
 					{
 						config->output_POV_P_Q = 1;
-						//printf("OUTput POV_P_Q enabled !! \n");
+						//fprintf(stderr, "OUTput POV_P_Q enabled !! \n");
 					}
 
 					// check for output of POV_V sentence
 					if (strcmp(tmp,"output_POV_V") == 0)
 					{
 						config->output_POV_V= 1;
-						//printf("OUTput POV_V enabled !! \n");
+						//fprintf(stderr, "OUTput POV_V enabled !! \n");
 					}
 
 					// check for output of POV_T sentence
 					if (strcmp(tmp,"output_POV_T") == 0)
 					{
 						config->output_POV_T = 1;
-						//printf("OUTput POV_T enabled !! \n");
+						//fprintf(stderr, "OUTput POV_T enabled !! \n");
 					}
 
 				       // check for output of POV_H sentence
 					if (strcmp(tmp,"output_POV_H") == 0)
 					{
 						config->output_POV_H = 1;
-						//printf("OUTput POV_H enabled !! \n");
+						//fprintf(stderr, "OUTput POV_H enabled !! \n");
 					}
 
 					// check for static_sensor
@@ -118,7 +113,7 @@ int cfgfile_parser(FILE *fp, t_ms5611 *static_sensor, t_ms5611 *tek_sensor, t_am
 										else if (!strcmp(tmp2,"SI7021")) temp_sensor->sensor_type=SI7021;
 											else if (!strcmp(tmp2,"DS18B20")) temp_sensor->sensor_type=DS18B20;
 												else if (!strcmp(tmp2,"AM2321")) temp_sensor->sensor_type=AM2321;
-													else printf ("Invalid sensor type.  Supported types are: auto, htu21d, htu31d, sht4x, sht85, si7021, ds18b20, and am2321 !!\n");
+													else fprintf(stderr, "Invalid sensor type.  Supported types are: auto, htu21d, htu31d, sht4x, sht85, si7021, ds18b20, and am2321 !!\n");
 					}
 
 					if (strcmp(tmp,"static_comp") == 0)

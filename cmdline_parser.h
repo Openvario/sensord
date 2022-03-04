@@ -17,6 +17,22 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#pragma once
+
 #include "main.h"
+
+#include <stdbool.h>
+#include <stdio.h>
+
+extern char config_filename[50];
+
+extern bool g_foreground;
+extern bool g_inetd;
+extern bool g_secordcomp;
+extern bool tj;
+
+extern FILE *fp_sensordata;
+extern FILE *fp_datalog;
+extern FILE *fp_config;
 
 void cmdline_parser(int argc, char **argv, t_io_mode *);

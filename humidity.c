@@ -1,3 +1,6 @@
+#include "humidity.h"
+#include "log.h"
+
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -7,11 +10,6 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-#include "ds2482.h"
-#include "humidity.h"
-
-extern int g_debug;
-extern FILE *fp_console;
 
 #define I2C_DEVICE "/dev/i2c-1"
 
@@ -59,7 +57,7 @@ int sht4x_open (t_ds2482 *sensor, unsigned char i2c_address) {
 		sensor->sensor_type=SHT4X;
 		if (si7021_crc_check((data[0]<<8)|(data[1]),data[2])!=0) return 4;
 		if (si7021_crc_check((data[3]<<8)|(data[4]),data[5])!=0) return 4;
-		printf ("SHT4x, Serial Number: 0x%x%x%x%x - ",data[0],data[1],data[3],data[4]);
+		fprintf(stderr, "SHT4x, Serial Number: 0x%x%x%x%x - ",data[0],data[1],data[3],data[4]);
 	} else {
 		data[0]=0x30;
 		data[1]=0xa2;
@@ -73,15 +71,15 @@ int sht4x_open (t_ds2482 *sensor, unsigned char i2c_address) {
 			sensor->sensor_type=SHT85;
 			if (si7021_crc_check((data[0]<<8)|(data[1]),data[2])!=0) return 5;
 			if (si7021_crc_check((data[3]<<8)|(data[4]),data[5])!=0) return 5;
-			printf ("SHT85, Serial Number: 0x%x%x%x%x - ",data[0],data[1],data[3],data[4]);
+			fprintf(stderr, "SHT85, Serial Number: 0x%x%x%x%x - ",data[0],data[1],data[3],data[4]);
 		} else return 3;
 	}
 
 	if (g_debug > 0) {
 		if (sensor->sensor_type==SHT4X)
-			printf ("Opened SHT4x\n");
+			fprintf(stderr, "Opened SHT4x\n");
 		else
-			printf ("Opened SHT85\n");
+			fprintf(stderr, "Opened SHT85\n");
 	}
 	sensor->address = i2c_address;
 	return (0);
@@ -111,7 +109,7 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 		while (nanosleep (&nstime,&nstime)) ;                                           // Wait 15 microseconds after reset
 		if (write(sensor->fd,data+6,1)!=1) {					// Request Status byte
 			if (read(sensor->fd,data+6,1)==1) {
-				printf ("In4\n");
+				fprintf(stderr, "In4\n");
 				if (data[6]!=0) return 3;						// Confirm status is good
 				if (write(sensor->fd,data+7,1)!=1) return 3;				// Request Serial Number
 				if (read(sensor->fd,data2,4)!=4) return 3;				// Read Serial Number
@@ -123,9 +121,9 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 					case 14 :
 					default : sensor->databits=0x5e; break;
 				}
-				printf ("HTU31D, Serial Number 0x%x%x%x - ",data[0],data[1],data[2]);
+				fprintf(stderr, "HTU31D, Serial Number 0x%x%x%x - ",data[0],data[1],data[2]);
 				sensor->sensor_type=HTU31D;
-				if (g_debug > 0) printf("Opened HTU31D on 0x%x\n", i2c_address);         // Debug info
+				if (g_debug > 0) fprintf(stderr, "Opened HTU31D on 0x%x\n", i2c_address);         // Debug info
 				sensor->address = i2c_address;
 				return 0;
 			}
@@ -167,19 +165,19 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 	switch (data[0]) {								// Display Serial number and set sensor type
 		case 0x00 :
 		case 0xff : sensor->sensor_type=SI7021;
-			    printf ("SI7021, Engineering Sample, Serial Number: 0x%x%x\n",sernuma,sernumb); break;
+			    fprintf(stderr, "SI7021, Engineering Sample, Serial Number: 0x%x%x\n",sernuma,sernumb); break;
 		case 0x0d :
 		case 0x14 :
 		case 0x15 : sensor->sensor_type=SI7021;
-			    printf ("SI70%d, Serial Number: 0x%x%x\n",data[0],sernuma,sernumb); break;
+			    fprintf(stderr, "SI70%d, Serial Number: 0x%x%x\n",data[0],sernuma,sernumb); break;
 		case 0x32 : sensor->sensor_type=HTU21D;
 			    if ((sernumb&0xffff)!=0x4854)
-				printf ("HTU21D, but serial number is invalid - ");
+				fprintf(stderr, "HTU21D, but serial number is invalid - ");
 			    else
-				printf ("HTU21D, Serial Number: 0x%x%x%x%x%x - ",data[3],data[4],sernuma,data[0],data[1]);
+				fprintf(stderr, "HTU21D, Serial Number: 0x%x%x%x%x%x - ",data[3],data[4],sernuma,data[0],data[1]);
 			    break;
 		default   : sensor->sensor_type=SI7021;
-			    printf ("SI70%d, UNKNOWN SENSOR, Serial Number 0x%x%x\n",data[0],sernuma,sernumb);
+			    fprintf(stderr, "SI70%d, UNKNOWN SENSOR, Serial Number 0x%x%x\n",data[0],sernuma,sernumb);
 	}
 	if (sensor->sensor_type==SI7021) {						// If it's a SI7021 get the firmware revision
 		data[0]=0x84;
@@ -187,15 +185,15 @@ int si7021_open (t_ds2482 *sensor, unsigned char i2c_address) {
 		if (write(sensor->fd,data,2)<0) return 4;
 		if (read(sensor->fd,data,1)<0) return 4;
 		switch (data[0]) {
-			case 0xff : printf ("Firmware revision 1.0 - "); break;
-			case 0x20 : printf ("Firmware revision 2.0 - "); break;
-			default   : printf ("Firmware revision UNKNOWN 0x%x - ",data[0]);
+			case 0xff : fprintf(stderr, "Firmware revision 1.0 - "); break;
+			case 0x20 : fprintf(stderr, "Firmware revision 2.0 - "); break;
+			default   : fprintf(stderr, "Firmware revision UNKNOWN 0x%x - ",data[0]);
 		}
 	}
 
 	if (g_debug > 0) {
-		if (sensor->sensor_type==SI7021) printf("Opened SI7021/HTU21D on 0x%x\n", i2c_address);		// Debug info
-		else printf ("Opened HTU21D on 0x%x\n",i2c_address);
+		if (sensor->sensor_type==SI7021) fprintf(stderr, "Opened SI7021/HTU21D on 0x%x\n", i2c_address);		// Debug info
+		else fprintf(stderr, "Opened HTU21D on 0x%x\n",i2c_address);
 	}
 	sensor->address = i2c_address;
 	return (0);
@@ -389,7 +387,7 @@ int am2321_open (t_ds2482 *sensor, unsigned char i2c_address) {
 	}
 
 	if (am2321_read(sensor)>0) return 1;
-	if (g_debug > 0) printf("Opened AM2321 on 0x%x\n", i2c_address);
+	if (g_debug > 0) fprintf(stderr, "Opened AM2321 on 0x%x\n", i2c_address);
 
 	// assign file handle to sensor object
 	sensor->address = i2c_address;

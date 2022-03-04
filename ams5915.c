@@ -18,6 +18,8 @@
 */
 
 #include "ams5915.h"
+#include "log.h"
+
 #include <time.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
@@ -29,10 +31,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include "def.h"
-
-extern int g_debug;
-extern FILE *fp_console;
 
 /**
 * @brief Establish connection to AMS5915 pressure sensor
@@ -61,7 +59,7 @@ int ams5915_open(t_ams5915 *sensor, unsigned char i2c_address)
 		return 1;
 	}
 
-	if (g_debug > 0) printf("Opened AMS5915 on 0x%x\n", i2c_address);
+	if (g_debug > 0) fprintf(stderr, "Opened AMS5915 on 0x%x\n", i2c_address);
 
 	// assign file handle to sensor object
 	sensor->fd = fd;
@@ -104,7 +102,7 @@ int ams5915_measure(t_ams5915 *sensor)
 	uint8_t buf[10]={0x00};
 
 	if (read(sensor->fd, buf, 4) != 4) {								// Read back data into buf[]
-		printf("Unable to read from slave\n");
+		fprintf(stderr, "Unable to read from slave\n");
 		return(1);
 	}
 

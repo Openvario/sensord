@@ -18,6 +18,8 @@
 */
 
 #include "ads1110.h"
+#include "log.h"
+
 #include <time.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
@@ -28,10 +30,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include "def.h"
-
-extern int g_debug;
-extern FILE *fp_console;
 
 int ads1110_open(t_ads1110 *sensor, unsigned char i2c_address)
 {
@@ -61,7 +59,7 @@ int ads1110_open(t_ads1110 *sensor, unsigned char i2c_address)
 		return (1);
 	}
 
-	if (g_debug > 0) printf("Opened ADS1110 on 0x%x\n", i2c_address);
+	if (g_debug > 0) fprintf(stderr, "Opened ADS1110 on 0x%x\n", i2c_address);
 
 	// assign file handle to sensor object
 	sensor->fd = fd;
@@ -88,7 +86,7 @@ int ads1110_measure(t_ads1110 *sensor)
 
 
 	if (read(sensor->fd, buf, 3) != 3) {								// Read back data into buf[]
-		printf("Unable to read from slave\n");
+		fprintf(stderr, "Unable to read from slave\n");
 		return(1);
 	}
 

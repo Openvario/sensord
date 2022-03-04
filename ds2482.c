@@ -18,6 +18,8 @@
 */
 
 #include "ds2482.h"
+#include "log.h"
+
 #include <time.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
@@ -28,10 +30,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include "def.h"
-
-extern int g_debug;
-extern FILE *fp_console;
 
 //http://datasheets.maximintegrated.com/en/ds/DS2482-100.pdf
 //http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf
@@ -59,7 +57,7 @@ int ds2482_open(t_ds2482 *sensor, unsigned char i2c_address)
 		return 0;
 	}
 
-	if (g_debug > 0) printf("Opened DS2482 on 0x%x\n", i2c_address);
+	if (g_debug > 0) fprintf(stderr, "Opened DS2482 on 0x%x\n", i2c_address);
 	//assign file handle to sensor object
 	sensor->fd = fd;
 	sensor->address = i2c_address;

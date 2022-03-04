@@ -16,6 +16,18 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "ds2482.h"
+#include "ms5611.h"
+#include "ams5915.h"
+#include "ads1110.h"
+#include "cmdline_parser.h"
+#include "configfile_parser.h"
+#include "vario.h"
+#include "AirDensity.h"
+#include "24c16.h"
+#include "wait.h"
+#include "log.h"
+
 #include <termios.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -34,72 +46,24 @@
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include <syslog.h>
-//#include "version.h"
-//#include "w1.h"
-#include "def.h"
-
-#include "ds2482.h"
-#include "ms5611.h"
-#include "ams5915.h"
-#include "ads1110.h"
-#include "cmdline_parser.h"
-#include "configfile_parser.h"
-#include "vario.h"
-#include "AirDensity.h"
-#include "24c16.h"
-#include "wait.h"
-
-#define I2C_ADDR 0x76
-#define PRESSURE_SAMPLE_RATE 	20	// sample rate of pressure values (Hz)
-#define TEMP_SAMPLE_RATE 		5	// sample rate of temp values (Hz)
-#define NMEA_SLOW_SEND_RATE		2	// NMEA send rate for SLOW Data (pressures, etc..) (Hz)
-
-#define MEASTIMER (SIGRTMAX)
 
 // Sensor objects
-t_ms5611 static_sensor;
-t_ms5611 tep_sensor;
-t_ams5915 dynamic_sensor;
-t_ads1110 voltage_sensor;
-t_ds2482 temp_sensor;
+static t_ms5611 static_sensor;
+static t_ms5611 tep_sensor;
+static t_ams5915 dynamic_sensor;
+static t_ads1110 voltage_sensor;
+static t_ds2482 temp_sensor;
 
-
-t_config config;
-t_io_mode io_mode;
-timer_t  measTimer;
-int g_debug=0;
-int g_log=0;
-int sidx=0;
-int tidx=0;
-double statval[1048576][3];
-double tepval[1048576][3];
-int glitch=0;
-int noglitch=0;
-int idx=0;
-int urun=0;
-int orun=0;
-
-// pressures
-float tep;
-float p_static;
-
-int g_foreground=FALSE;
-int g_secordcomp=FALSE;
-int tj=FALSE;
-
-char config_filename[50];
-FILE *fp_console=NULL;
-FILE *fp_sensordata=NULL;
-FILE *fp_config=NULL;
-FILE *fp_datalog=NULL;
-//FILE *fp1=NULL;
-//FILE *fp2=NULL;
-
-//FILE *fp_rawlog=NULL;
-
-enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
-
-//typedef enum { measure_only, record, replay} t_measurement_mode;
+static t_config config;
+static t_io_mode io_mode;
+static int sidx=0;
+static int tidx=0;
+static double statval[1048576][3];
+static double tepval[1048576][3];
+static int glitch=0;
+static int noglitch=0;
+static int urun=0;
+static int orun=0;
 
 /**
 * @brief Signal handler if sensord will be interrupted
@@ -111,7 +75,8 @@ enum e_state { IDLE, TEMP, PRESSURE} state = IDLE;
 * @date 17.04.2014 born
 
 */
-void sigintHandler(int sig_num){
+static void sigintHandler(int sig_num)
+{
 	(void)sig_num;
 
 	signal(SIGINT, sigintHandler);
@@ -120,13 +85,7 @@ void sigintHandler(int sig_num){
 	if (fp_sensordata != NULL)
 		fclose(fp_sensordata);
 
-	//close fp_config if used
-	if (fp_config != NULL)
-		fclose(fp_config);
-
-	//fclose(fp_rawlog);
-	printf("Exiting ...\n");
-	fclose(fp_console);
+	fprintf(stderr, "Exiting ...\n");
 
 	exit(0);
 }
@@ -140,7 +99,7 @@ void sigintHandler(int sig_num){
 * @date 17.04.2014 born
 *
 */
-void pressure_measurement_handler(int record)
+static void pressure_measurement_handler(int record)
 {
 	static unsigned int meas_counter=1, glitchstart=0,shutdown=0,deltaxmax=0;
 	int x=0, deltax;
@@ -243,13 +202,13 @@ void pressure_measurement_handler(int record)
 	}
 	if (glitch) noglitch=0; else noglitch++;
 	meas_counter++;
-	if (io_mode.sensordata_to_file == TRUE) {
+	if (io_mode.sensordata_to_file) {
 		if ((meas_counter%2==1) && (record))
 			fprintf(fp_datalog, "%.4f %.4f %f %u %u %u %u %u %u %u %u %d\n",tep_sensor.p,static_sensor.p,dynamic_sensor.p,static_sensor.D1,static_sensor.D1f,tep_sensor.D1,tep_sensor.D1f,static_sensor.D2,static_sensor.D2f,tep_sensor.D2,tep_sensor.D2f,glitch);
 	}
 }
 
-void polyfit (double val[][3], int idx, double pf[], double rmserr[])
+static void polyfit(double val[][3], int idx, double pf[], double rmserr[])
 {
 	int i;
 	double  x[4], y[3], inv[3][3];
@@ -322,15 +281,14 @@ int main (int argc, char **argv) {
 	config.timing_mult = 50;
 	config.timing_off  = 12;
 
-	//open file for raw output
-	//fp_rawlog = fopen("raw.log","w");
-
 	//parse command line arguments
 	cmdline_parser(argc, argv, &io_mode);
 
 	// get config file options
-	if (fp_config != NULL)
+	if (fp_config != NULL) {
 		cfgfile_parser(fp_config, &static_sensor, &tep_sensor, &dynamic_sensor, &voltage_sensor, &temp_sensor, &config);
+		fclose(fp_config);
+	}
 
 	// check if we are a daemon or stay in foreground
 	// stay in foreground
@@ -341,14 +299,8 @@ int main (int argc, char **argv) {
 	sigaction(SIGINT, &sigact, NULL);
 
 	// open console again, but as file_pointer
-	fp_console = stdout;
-	stderr = stdout;
-	setbuf(fp_console, NULL);
 	setbuf(stderr, NULL);
 
-	// close the standard file descriptors
-	//close(STDOUT_FILENO);
-	close(STDERR_FILENO);
 	// ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
 	// we need hardware sensors for running !!
@@ -489,7 +441,6 @@ int main (int argc, char **argv) {
 		} else i=0;
 	}
 	if (fp_datalog!=NULL) fclose(fp_datalog);
-	if (fp_config!=NULL) fclose(fp_config);
 	fp_config  = fopen (config_filename,"a+");
 
 	polyfit (statval, sidx, &pf[0][0],&rmserr[0][0]);

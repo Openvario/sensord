@@ -16,19 +16,17 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "sensorcal.h"
 #include "24c16.h"
 #include "ams5915.h"
 #include "wait.h"
-#include "sensorcal.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 
-int g_debug=0;
-FILE *fp_console=NULL;
-
-int calibrate_ams5915(t_eeprom_data* data)
+static int calibrate_ams5915(t_eeprom_data* data)
 {
 	t_ams5915 dynamic_sensor;
 	float offset=0.0;

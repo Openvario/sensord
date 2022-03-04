@@ -17,13 +17,11 @@
     along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "nmea.h"
+#include "log.h"
+
 #include <stdio.h>
 #include <string.h>
-#include "nmea.h"
-#include "def.h"
-
-extern int g_debug;
-extern FILE *fp_console;
 
 /**
 * @brief Implements the $POV NMEA Sentence for pressure data

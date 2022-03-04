@@ -2,4 +2,5 @@ obj/*
 doc/*
 sensord
 sensorcal
+/compdata
 *.bak
