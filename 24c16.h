@@ -8,7 +8,7 @@ typedef struct {
 	unsigned char address;
 } t_24c16;
 
-typedef struct {
+typedef struct __attribute__((packed)){
 	char header[3];
 	char data_version;
 	char serial[6];
