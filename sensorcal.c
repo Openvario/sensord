@@ -83,7 +83,7 @@ int main (int argc, char **argv) {
 	int result;
 	int c;
 	int i;
-	char sn[7];
+	char sn[SN_LENGTH];
 	char zero[1]={0x00};
 
 
@@ -128,8 +128,9 @@ int main (int argc, char **argv) {
 				}
 				strcpy(data.header, "OV");
 				data.data_version = EEPROM_DATA_VERSION;
-				memset(data.serial,'0',6);
+				memset(data.serial,'0',SN_LENGTH);
 				data.zero_offset=0.0;
+				memset(data.padding,'0',3);
 				update_checksum(&data);
 				printf("Writing data to EEPROM ...\n");
 				result = eeprom_write(&eeprom, (char*)&data, 0x00, sizeof(data));
@@ -171,7 +172,7 @@ int main (int argc, char **argv) {
 				printf("Reading EEPROM values ...\n\n");
 				if( eeprom_read_data(&eeprom, &data) == 0)
 				{
-				  memcpy(sn,data.serial,6);
+				  memcpy(sn,data.serial,SN_LENGTH);
 					printf("Actual EEPROM values:\n");
 					printf("---------------------\n");
 					printf("Serial: \t\t\t%s\n", sn);
@@ -189,12 +190,12 @@ int main (int argc, char **argv) {
 				break;
 
 			case 's':
-				if( strlen(optarg) == 6)
+				if( strlen(optarg) == SN_LENGTH)
 				{
 					// read actual EEPROM values
 					if( eeprom_read_data(&eeprom, &data) == 0)
 					{
-						for(i=0; i<6;i++)
+						for(i=0; i<SN_LENGTH;i++)
 						{
 							sn[i]=data.serial[i]=*optarg;
 							optarg++;
@@ -214,7 +215,7 @@ int main (int argc, char **argv) {
 				}
 				else
 				{
-					printf("ERROR: Serialnumber has to have exactly 6 characters !!\n");
+					printf("ERROR: Serialnumber has to have exactly 8 characters !!\n");
 					exit_code=1;
 					break;
 				}
