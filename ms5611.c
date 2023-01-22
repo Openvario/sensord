@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <linux/i2c-dev.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
@@ -34,35 +35,35 @@
 /**
 * @brief Establish connection to MS5611 pressure sensor
 * @param sensor pointer to sensor instance
-* @param i2c_address
 * @return result
 *
 * @date 24.03.2016 revised
 *
 */
-int ms5611_open(t_ms5611 *sensor, unsigned char i2c_address)
+int ms5611_open(t_ms5611 *sensor)
 {
 	// local variables
 	int fd;
+	char i2c_dev[PATH_MAX] = {0};
+	sprintf(i2c_dev, "/dev/i2c-%hhu", sensor->bus);
 
 	// try to open I2C Bus
-	fd = open("/dev/i2c-1", O_RDWR);
+	fd = open(i2c_dev, O_RDWR);
 
 	if (fd < 0) {
-		fprintf(stderr, "Error opening file: %s\n", strerror(errno));
+		fprintf(stderr, "Error opening %s: %s\n", i2c_dev, strerror(errno));
 		return 1;
 	}
 
-	if (ioctl(fd, I2C_SLAVE, i2c_address) < 0) {
+	if (ioctl(fd, I2C_SLAVE, sensor->address) < 0) {
 		fprintf(stderr, "ioctl error: %s\n", strerror(errno));
 		return 1;
 	}
 
-	if (g_debug > 0) fprintf(stderr, "Opened MS5611 on 0x%x\n", i2c_address);
+	if (g_debug > 0) fprintf(stderr, "Opened MS5611 on bus %s with address 0x%x\n", i2c_dev, sensor->address);
 
 	// assign file handle to sensor object
 	sensor->fd = fd;
-	sensor->address = i2c_address;
 	return (0);
 }
 
