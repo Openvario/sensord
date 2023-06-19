@@ -2,6 +2,8 @@
 
 #define EEPROM_DATA_VERSION 1
 
+#define SN_LENGTH 8
+
 // define struct for MS5611 sensor
 typedef struct {
 	int fd;
@@ -11,10 +13,13 @@ typedef struct {
 typedef struct {
 	char header[3];
 	char data_version;
-	char serial[6];
 	float zero_offset;
+	char serial[SN_LENGTH];
+	char padding[3];
 	char checksum;
 } t_eeprom_data;
+
+
 
 // prototypes
 int eeprom_open(t_24c16 *, unsigned char);
