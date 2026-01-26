@@ -2,8 +2,9 @@
 
 This document describes the OpenVario communication protocol. Communication between `sensord` and `variod` and XCSoar is based on NMEA sentences. NMEA is the abbreviation for "National Marine Electronics Association".
 
-**Version:** 1.3  
-**Date:** 14.03.2016 - battery voltage sentence added
+**Version:** 1.4  
+**Date:** 14.03.2016 - battery voltage sentence added  
+**Date:** 20.01.2026 - sentences added for Acceleration and Gyro
 
 The original definition of these sentences can be found here.
 
@@ -54,7 +55,22 @@ The following value pairs are defined at the moment:
 
 ### Vario
 - **E:** TE vario in m/s
-  - Example: `$POV,E,2.15*14`
+  - Example: `$POV,E,2.15*14` 
+
+### Acceleration
+- **A:** acceleration in m/s²
+  - Example: `$POV,A,-1.5099,-.0292,13.7134*18`
+  - Note: <value> consists of 3 components: X,Y,Z
+  - Values are presented in body frame axis (X forward, Y right, Z down)
+
+### Angular Rate (aka Gyroscope)
+- **G:** Angular Rate in °/s
+  - Example: `$POV,G,4.165,-8.709,-10.479*1B`
+  - Note: <value> consists of 3 components: X,Y,Z
+  - Values are presented in body frame axis (X forward, Y right, Z down)
+  - roll, left wing up is positive
+  - pitch, nose up is positive
+  - yaw, right turn is positive
 
 ---
 
