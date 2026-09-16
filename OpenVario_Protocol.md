@@ -2,9 +2,11 @@
 
 This document describes the OpenVario communication protocol. Communication between `sensord` and `variod` and XCSoar is based on NMEA sentences. NMEA is the abbreviation for "National Marine Electronics Association".
 
-**Version:** 1.4  
+**Version:** 1.5
 **Date:** 14.03.2016 - battery voltage sentence added  
 **Date:** 20.01.2026 - sentences added for Acceleration and Gyro
+**Date:** 09.09.2026 - sentences added for unaligned Acceleration and Gyro
+**Date:** 09.09.2026 - added sentence for non compensated vario
 
 The original definition of these sentences can be found here.
 
@@ -57,11 +59,22 @@ The following value pairs are defined at the moment:
 - **E:** TE vario in m/s
   - Example: `$POV,E,2.15*14` 
 
+- **e:** non compensated vario in m/s
+  - Example: `$POV,e,2.15*34` 
+
 ### Acceleration
 - **A:** acceleration in m/s²
   - Example: `$POV,A,-1.5099,-.0292,13.7134*18`
   - Note: <value> consists of 3 components: X,Y,Z
   - Values are presented in body frame axis (X forward, Y right, Z down)
+
+- **a:** acceleration in m/s²
+  - Example: `$POV,a,-1.5099,-.0292,13.7134*38`
+  - Note: <value> consists of 3 components: X,Y,Z
+  - The sensor's three axes are **not** parallel to the aircraft's axes
+
+- **L:** G-Load in multiples of G (9.81 m/s²)
+  - Example: `$POV,L,0.9134*14`
 
 ### Angular Rate (aka Gyroscope)
 - **G:** Angular Rate in °/s
@@ -71,6 +84,11 @@ The following value pairs are defined at the moment:
   - roll, left wing up is positive
   - pitch, nose up is positive
   - yaw, right turn is positive
+
+- **g:** Angular Rate in °/s
+  - Example: `$POV,g,4.165,-8.709,-10.479*3B`
+  - Note: <value> consists of 3 components: X,Y,Z
+  - The sensor's three axes are **not** parallel to the aircraft's axes
 
 ---
 
